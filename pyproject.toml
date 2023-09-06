@@ -37,6 +37,8 @@ path = "src/cstq/__version__.py"
 dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
+  "ipython",
+  "jupyter"
 ]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
@@ -139,14 +141,14 @@ ban-relative-imports = "all"
 [tool.ruff.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
-"*" = ["S101"]
+"*" = ["S101", "PLR2004"]
 
 [tool.coverage.run]
 source_pkgs = ["cstq", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/cstq/__about__.py",
+  "src/cstq/__version__.py",
 ]
 
 [tool.coverage.paths]

@@ -55,10 +55,11 @@ baz()
     )
 
 
-def test_repalce_funtion_argument_if_exists():
+def test_replace_funtion_argument_if_exists():
     q = Query(MODULE)
-    fcall = q.find_function_call(func_name="bar")[0]
-    if len(fcall.args) == 0:
+    fcall = q.find_function_call(func_name="bar").slice(0, 1)
+
+    if len(fcall.args[:]) == 0:
         fcall.change(args=(cst.Arg(value=cst.Name(value="noargs")),))
 
     assert (
@@ -93,7 +94,7 @@ def test_remove_funct(simple_bzl):
         )
     )
     args = load_glob.args
-    assert len(args) > 1
+    assert len(args[:]) > 1
     args = args[1:]
     if len(args) == 1:
         load_glob.parent().remove()
@@ -105,5 +106,7 @@ def test_remove_funct(simple_bzl):
 
 def test_change_oncall(simple_bzl):
     q = Query(simple_bzl)
-    q.find_function_call(func_name="oncall").args[0].value.change(value='"new_oncall"')
+    oncall_func = q.find_function_call(func_name="oncall")
+    arg_0 = oncall_func.args[0]
+    arg_0.value.change(value='"new_oncall"')
     assert q.code() == simple_bzl.replace("there_is_no_oncall", "new_oncall")

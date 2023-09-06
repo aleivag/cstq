@@ -17,7 +17,7 @@
 *.gz
 *.iso
 *.rar
-#*.tar
+*.tar
 *.zip
 
 # Logs and databases #
@@ -74,6 +74,7 @@ pip-delete-this-directory.txt
 target/
 
 # Jupyter Notebook
+*.ipynb
 .ipynb_checkpoints
 
 # pyenv
@@ -84,3 +85,4 @@ target/
 .venv
 venv/
 ENV/
+.local

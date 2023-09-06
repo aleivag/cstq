@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import singledispatch
 from pathlib import Path
-from typing import Any, Iterable, NoReturn, Sequence
+from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
 
 import libcst as cst
 import libcst.matchers as m
@@ -11,6 +11,7 @@ from cstq.csttraformers import ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
 from cstq.matchers import matcher
 from cstq.node2id import NodeIDProvider
+from cstq.nodes import CSTRange
 
 
 class CollectionOfNodes:
@@ -26,22 +27,31 @@ class CollectionOfNodes:
     def _nodes_id(self) -> list[str]:
         return self.__node_ids
 
+    def slice(self, start=None, end=None, step=None):  # noqa: A003
+        return CollectionOfNodes(self.__node_ids[slice(start, end, step)], root=self.root)
+
     def filter(self, test) -> CollectionOfNodes:  # noqa: A003
         match_test = matcher(test)
         return CollectionOfNodes(
-            [node_id for node_id in self.__node_ids if match_test(self.root.get_node_by_id(node_id))],
+            [
+                self.root.get_node_id(real_node)
+                for node_id in self.__node_ids
+                if (node := self.root.get_node_by_id(node_id))
+                for real_node in (node.elems if isinstance(node, CSTRange) else [node])
+                if match_test(real_node)
+            ],
             root=self.root,
         )
 
     def filter_by_type(self, type_, test=None) -> CollectionOfNodes:
         return self.filter(lambda x: isinstance(x, type_) and (test(x) if test is not None else True))
 
-    def search(self, test) -> CollectionOfNodes:
+    def search(self, *tests: m.BaseMatcherNode | Callable[[cst.CSTNode], bool] | cst.CSTNode) -> CollectionOfNodes:
         return CollectionOfNodes(
             (
                 self.root.get_node_id(found_node)
                 for node in self.__nodes.values()
-                for found_node in Extractor.match(node, matcher(test))
+                for found_node in Extractor.match(node, matcher(tests))
             ),
             root=self.root,
         )
@@ -54,34 +64,71 @@ class CollectionOfNodes:
         nodes = self.search(m.Call(func=m.Name(value=func_name) if func_name else m.DoNotCare()))
         return nodes
 
+    def find_import(self, module: list[str]):
+        left_module_parts = [*module]
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel
+
+        if len(left_module_parts) == 1:
+            module_match = m.Name(value=left_module_parts[0])
+
+        elif len(left_module_parts) > 2:
+            value = left_module_parts.pop(0)
+            attr = left_module_parts.pop(0)
+            attribute_match_test = m.Attribute(value=m.Name(value), attr=m.Name(attr))
+
+            while left_module_parts:
+                attribute_match_test = m.Attribute(value=attribute_match_test, attr=m.Name(left_module_parts.pop(0)))
+
+            module_match = attribute_match_test
+
+        else:
+            module_match = m.DoNotCare()
+
+        return self.search(m.ImportFrom(module=module_match))
+
     def __or__(self, other):
         assert self.root == other.root, "Both collections must have the same root"
-        CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)
+        return CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)
 
     def __getitem__(self, item) -> CollectionOfNodes:
-        if callable(item):
-            return self.filter(item)
         if isinstance(item, int):
-            return CollectionOfNodes([self.__node_ids[item]], root=self.root)
+            return CollectionOfNodes(
+                [self.root.get_node_id(node[item]) for node in self.nodes() if isinstance(node, CSTRange)],
+                root=self.root,
+            )
         if isinstance(item, slice):
             # maybe treat slice a bit different
-            return CollectionOfNodes(self.__node_ids[item], root=self.root)
+            return CollectionOfNodes(
+                [
+                    self.root.get_node_id(elem)
+                    for node in self.nodes()
+                    if isinstance(node, CSTRange)
+                    for elem in cast(CSTRange, node[item])
+                ],
+                root=self.root,
+            )
 
-        msg = f"{item} of {type(item)=} not implemented/allowed"
-        raise NotImplementedError(msg)
+        return self.filter(item)
+
+        # msg = f"{item} of {type(item)=} not implemented/allowed"
+        # raise NotImplementedError(msg)
 
     def __getattr__(self, item) -> CollectionOfNodes:
-        results: list[cst.CSTNode] = []
+        results: list[str] = []
         for _node_id, node in self.__nodes.items():
             if not hasattr(node, item):
                 continue
-            attr = getattr(node, item)
-            if isinstance(attr, (list, tuple)):
-                results.extend(attr)
-            else:
-                results.append(attr)
 
-        return CollectionOfNodes(self.root.get_nodes_id(results).values(), self.root)
+            attr = getattr(node, item)
+            if isinstance(attr, cst.CSTNode):
+                results.append(self.root.get_node_id(attr))
+            elif isinstance(attr, (list, tuple)):
+                results.append(f"{_node_id}.{item}")
+
+        return CollectionOfNodes(
+            results,
+            self.root,
+        )
 
     def __repr__(self) -> str:
         return f"<CollectionOfNodes nodes={self.__node_ids}>"
@@ -89,23 +136,25 @@ class CollectionOfNodes:
     def __len__(self) -> int:
         return len(self.__node_ids)
 
-    def change(self, **kwargs) -> CollectionOfNodes:
+    def change(self, *arg, **kwargs) -> CollectionOfNodes:
+        assert len(arg) < 2, "should probide only one callable"
+        if arg:
+            callable_ = arg[0]
+        else:
+
+            def callable_(n):
+                return n
+
         return CollectionOfNodes(
-            self.root.replace_nodes({node_id: node.with_changes(**kwargs) for node_id, node in self.__nodes.items()}),
+            self.root.replace_nodes(
+                {node_id: callable_(node).with_changes(**kwargs) for node_id, node in self.__nodes.items()}
+            ),
             self.root,
         )
 
     def replace(self, new_node: cst.CSTNode | cst.RemovalSentinel) -> CollectionOfNodes:
         new_node_ids = self.root.replace_nodes({node_id: new_node for node_id in self.__node_ids})
         return CollectionOfNodes([new_id for new_id in new_node_ids if new_id], self.root)
-
-    # def swap(self, new_node: cst.CSTNode )  -> CollectionOfNodes:
-    #     assert len(self.__node_ids) == 1, "you can only swap one node"
-    #
-    #     self.root.replace_nodes({
-    #         self.__node_ids[0]: new_node,
-    #         self.root.get_node_id(new_node): self.node(),
-    #     })
 
     def remove(self) -> CollectionOfNodes:
         return self.replace(cst.RemovalSentinel.REMOVE)
@@ -141,6 +190,12 @@ class CollectionOfNodes:
             parents = {self.root.get_parent_of_node(node) for node in parents}
         return CollectionOfNodes(list(set(result)), self.root)
 
+    def code_for_nodes(self) -> list[str]:
+        return [self.root.module.code_for_node(node) for node in self.nodes()]
+
+    def code_for_node(self) -> str:
+        return self.root.module.code_for_node(self.node())
+
 
 class Query(CollectionOfNodes):
     def __init__(self, mod: cst.CSTNode | str | Path) -> None:
@@ -148,7 +203,7 @@ class Query(CollectionOfNodes):
         self.wrapper: cst.metadata.MetadataWrapper = cst.metadata.MetadataWrapper(parsed_mod)
         self.module: cst.Module = self.wrapper.module
 
-        self.__node_to_id: dict[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
+        self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
 
         CollectionOfNodes.__init__(self, [self.get_node_id(self.module)], self)
@@ -179,6 +234,9 @@ class Query(CollectionOfNodes):
 
     def write(self, path: Path) -> int:
         return path.write_text(self.code())
+
+    def collection(self, nodes: cst.CSTNode):
+        return CollectionOfNodes([self.get_node_id(nodes)], self.root)
 
 
 @singledispatch
