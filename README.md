@@ -101,8 +101,8 @@ Name(
 ### 2. Filtering
 
 Filtering allows you to "filter" the current selection of nodes to specific ones. Each one of these accepts either a 
-[`libcst.matchers`](https://libcst.readthedocs.io/en/latest/matchers_tutorial.html) or a callback. `libcst.matchers` 
-presents a very powerful query language, and when that's not enough, you can always fall back to a custom callback.
+[`libcst.matchers`](https://libcst.readthedocs.io/en/latest/matchers_tutorial.html) or a callback (more on callbacks later). 
+`libcst.matchers` presents a very powerful query language, and when that's not enough, you can always fall back to a custom callback.
 
 
 ```python
@@ -124,7 +124,8 @@ presents a very powerful query language, and when that's not enough, you can alw
 ```
 
 By using the `.filter` method, you can filter any selection. For instance, `q.body[:]` represents the elements of the body of 
-the module. However, you can also filter out by using the `getitem` operation, making it a bit more compact.
+the module. However, you can also filter out by using the `__getitem__` operation (`[.. add your filter here ...]`), 
+making it a bit more compact.
 
 ### 3. Searching
 
@@ -136,13 +137,19 @@ to `.filter`, it accepts a `libcst.matchers` or a callback.
 <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Import)', '$(Module).body[1](FunctionDef).body(IndentedBlock).body[0](SimpleStatementLine).body[0](Import)']>
 
 # get the __name__ == "__main__" using search and filter
->>> q.search(m.If()).filter(lambda n: q.module.code_for_node(n.test) == '__name__ == "__main__"')
+>>> q.search(m.If()).filter(lambda n: n.test.code() == '__name__ == "__main__"')
 <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 
 # combining multiple search and filters into a single statement 
->>> q.search(m.If(), lambda n: q.module.code_for_node(n.test) == '__name__ == "__main__"')
+>>> q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
 <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 ```
+
+### callbacks
+
+`.filter` and `.search` can take a callback method that takes an _extended version_ of a CSTNode and returns true or false.
+The extended version of the CSTNode its the regular CSTNode with a couple of extra methods like `.parent()` to give your the parent,
+and `.code()` to generate the code that node represents, soo far I haven't added anything else.
 
 ### codemod (changes)
 
@@ -221,7 +228,7 @@ you can replace a node with another one
 
 ```python
 # creates a node from text
->>> import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
+>>> import_from = cst.parse_statement("from python_wrapper import os")
 
 >>> q.search(m.Import()).replace(import_from)
 
@@ -240,7 +247,7 @@ if __name__ == "__main__":
 ```python
 
 # Let's add the import at the top level
->>> q.change(lambda n:n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
+>>> q.change(lambda n: n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
 <CollectionOfNodes nodes=['$(Module)']>
 
 # Let's remove the inner import

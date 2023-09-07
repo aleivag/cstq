@@ -11,7 +11,7 @@ from cstq.csttraformers import ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
 from cstq.matchers import matcher
 from cstq.node2id import NodeIDProvider
-from cstq.nodes import CSTRange
+from cstq.nodes import CSTQExtendedNode, CSTQRange
 
 
 class CollectionOfNodes:
@@ -30,34 +30,34 @@ class CollectionOfNodes:
     def slice(self, start=None, end=None, step=None):  # noqa: A003
         return CollectionOfNodes(self.__node_ids[slice(start, end, step)], root=self.root)
 
-    def filter(self, test) -> CollectionOfNodes:  # noqa: A003
-        match_test = matcher(test)
+    def filter(  # noqa: A003
+        self,
+        *test: m.BaseMatcherNode | Callable[[cst.CSTNode | CSTQExtendedNode], bool] | cst.CSTNode,
+    ) -> CollectionOfNodes:
+        match_test = matcher(test, self.root)
         return CollectionOfNodes(
             [
                 self.root.get_node_id(real_node)
                 for node_id in self.__node_ids
                 if (node := self.root.get_node_by_id(node_id))
-                for real_node in (node.elems if isinstance(node, CSTRange) else [node])
+                for real_node in (node.elems if isinstance(node, CSTQRange) else [node])
                 if match_test(real_node)
             ],
             root=self.root,
         )
 
-    def filter_by_type(self, type_, test=None) -> CollectionOfNodes:
-        return self.filter(lambda x: isinstance(x, type_) and (test(x) if test is not None else True))
-
-    def search(self, *tests: m.BaseMatcherNode | Callable[[cst.CSTNode], bool] | cst.CSTNode) -> CollectionOfNodes:
+    def search(
+        self,
+        *tests: m.BaseMatcherNode | Callable[[cst.CSTNode | CSTQExtendedNode], bool] | cst.CSTNode,
+    ) -> CollectionOfNodes:
         return CollectionOfNodes(
             (
                 self.root.get_node_id(found_node)
                 for node in self.__nodes.values()
-                for found_node in Extractor.match(node, matcher(tests))
+                for found_node in Extractor.match(node, matcher(tests, self.root))
             ),
             root=self.root,
         )
-
-    def search_by_type(self, type_, test=None) -> CollectionOfNodes:
-        return self.search(lambda x: isinstance(x, type_) and (test(x) if test is not None else True))
 
     # find functions
     def find_function_call(self, func_name: str | None = None) -> CollectionOfNodes:
@@ -93,7 +93,7 @@ class CollectionOfNodes:
     def __getitem__(self, item) -> CollectionOfNodes:
         if isinstance(item, int):
             return CollectionOfNodes(
-                [self.root.get_node_id(node[item]) for node in self.nodes() if isinstance(node, CSTRange)],
+                [self.root.get_node_id(node[item]) for node in self.nodes() if isinstance(node, CSTQRange)],
                 root=self.root,
             )
         if isinstance(item, slice):
@@ -102,8 +102,8 @@ class CollectionOfNodes:
                 [
                     self.root.get_node_id(elem)
                     for node in self.nodes()
-                    if isinstance(node, CSTRange)
-                    for elem in cast(CSTRange, node[item])
+                    if isinstance(node, CSTQRange)
+                    for elem in cast(CSTQRange, node[item])
                 ],
                 root=self.root,
             )
@@ -168,6 +168,12 @@ class CollectionOfNodes:
     def nodes(self) -> list[cst.CSTNode]:
         return [*self.__nodes.values()]
 
+    def extended_node(self) -> CSTQExtendedNode:
+        return self.root.get_extended_node(self.node())
+
+    def extended_nodes(self) -> list[CSTQExtendedNode]:
+        return [self.root.get_extended_node(node) for node in self.nodes()]
+
     def childrens(self) -> CollectionOfNodes:
         node_ids = self.root.get_nodes_id(
             [children for node in self.__nodes.values() for children in node.children]
@@ -205,8 +211,14 @@ class Query(CollectionOfNodes):
 
         self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
+        self.__extended_nodes: Mapping[cst.CSTNode, CSTQExtendedNode] = self.wrapper.resolve(
+            CSTQExtendedNode.provider(root=self)
+        )
 
         CollectionOfNodes.__init__(self, [self.get_node_id(self.module)], self)
+
+    def get_extended_node(self, node: cst.CSTNode) -> CSTQExtendedNode:
+        return self.__extended_nodes[node]
 
     def get_node_id(self, node: cst.CSTNode) -> str:
         return self.__node_to_id[node]

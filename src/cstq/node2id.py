@@ -3,7 +3,7 @@ from typing import Generator, Tuple
 
 import libcst as cst
 
-from cstq.nodes import CSTRange
+from cstq.nodes import CSTQRange
 
 
 class NodeIDProvider(cst.VisitorMetadataProvider[str]):
@@ -24,7 +24,7 @@ def node2id(
 @node2id.register(set)
 @node2id.register(tuple)
 def _(e: list, id_prefix: str) -> Generator[Tuple[cst.CSTNode, str], None, None]:
-    yield CSTRange(elems=e), id_prefix
+    yield CSTQRange(elems=e), id_prefix
     for n, elem in enumerate(e):
         yield from node2id(elem, f"{id_prefix}[{n}]")
 
