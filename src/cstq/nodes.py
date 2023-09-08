@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import types
 from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, NoReturn, Sequence, cast
 
@@ -17,7 +16,7 @@ class CSTQExtendedNode:
     original_node: cst.CSTNode
 
     @classmethod
-    def from_node(cls, node: cst.CSTNode, root: cstq.query.Query) -> CSTQExtendedNode:
+    def from_node(cls, node: cst.CSTNode, original_node: cst.CSTNode, root: cstq.query.Query) -> CSTQExtendedNode:
         node_cls = node.__class__
         extended_node_cls = type(
             node_cls.__name__,
@@ -39,31 +38,35 @@ class CSTQExtendedNode:
             extended_node_cls(
                 **{field.name: getattr(node, field.name) for field in fields(node)},
                 root=root,
-                original_node=node,
+                original_node=original_node,
             ),
         )
 
     @classmethod
-    def provider(cls, root):
-        """
-        Creates a metadata provider
-        """
-        extend_cst_nodes_provider = types.new_class(
-            "ExtendCSTNodesProvider",
-            (cst.VisitorMetadataProvider[cls],),
-            {},
-        )
-        extend_cst_nodes_provider.root = root
-        extend_cst_nodes_provider.on_leave = lambda self, original_node: self.set_metadata(
-            original_node, cls.from_node(original_node, root)
-        )
-        return extend_cst_nodes_provider
+    def map_module(cls, root):
+        class ExtendCSTNodesProvider(cst.CSTTransformer):
+            def __init__(self) -> None:
+                self.mapping: dict[cst.CSTNode, CSTQExtendedNode] = {}
+                super().__init__()
+
+            def on_leave(self, original_node, updated_node):
+                self.mapping[original_node] = cls.from_node(updated_node, original_node, root)
+                return self.mapping[original_node]
+
+        w = ExtendCSTNodesProvider()
+        root.module.visit(w)
+        return w.mapping
 
     def parent(self):
         return self.root.get_extended_node(self.root.get_parent_of_node(self.original_node))
 
     def code(self, module=None) -> str:
         return (module if module else self.root.module).code_for_node(self.original_node)
+
+    def match(self, test):
+        from cstq.matchers import match
+
+        return match(self, test, self.root)
 
 
 @add_slots
@@ -77,8 +80,12 @@ class CSTQRange(cst.CSTNode):
     ) -> None:
         raise NotImplementedError()
 
-    def _visit_and_replace_children(self, visitor: cst.CSTVisitorT) -> NoReturn:  # cst.CSTNode:
-        raise NotImplementedError("This is a fake range object, you can visit... expand it with q.elem[:]")
+    def _visit_and_replace_children(
+        self,
+        visitor: cst.CSTVisitorT,  # noqa: ARG002
+    ) -> NoReturn:  # cst.CSTNode:
+        msg = "This is a fake range object, you can visit... expand it with q.elem[:]"
+        raise NotImplementedError(msg)
 
     def __getitem__(self, item) -> cst.CSTNode:
         return self.elems[item]

@@ -33,10 +33,18 @@ def foo():
     )
 
 
-def test_get_all_first_level_imports():
+def test_get_all_first_level_imports_with_isinstance():
     "makes sure you can pass multiple methods to search, and you get a extended node"
 
     node = Query(MODULE).search(m.Import() | m.ImportFrom(), lambda n: isinstance(n.parent().parent(), cst.Module))
+
+    assert node.code_for_nodes() == ["import foo", "import bar", "from a.module import a_function"]
+
+
+def test_get_all_first_level_imports_with_match():
+    "makes sure you can pass multiple methods to search, and you get a extended node"
+
+    node = Query(MODULE).search(m.Import() | m.ImportFrom(), lambda n: n.parent().parent().match(m.Module()))
 
     assert node.code_for_nodes() == ["import foo", "import bar", "from a.module import a_function"]
 

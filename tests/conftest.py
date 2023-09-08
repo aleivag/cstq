@@ -1,5 +1,12 @@
 import pytest
 
+import cstq
+
+
+@pytest.fixture()
+def CSTQuery():  # noqa: N802
+    return cstq.Query
+
 
 @pytest.fixture()
 def simple_bzl():
@@ -40,3 +47,11 @@ rust_library(
   ],
 )
     """.strip()
+
+
+@pytest.fixture()
+def simple_bzl_query(
+    CSTQuery,  # noqa: N803
+    simple_bzl,
+):
+    return CSTQuery(simple_bzl)

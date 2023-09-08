@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import singledispatch
+from functools import partial, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
 
@@ -60,8 +60,29 @@ class CollectionOfNodes:
         )
 
     # find functions
-    def find_function_call(self, func_name: str | None = None) -> CollectionOfNodes:
+    def find_function_call(
+        self,
+        func_name: str | None = None,
+        *,
+        has_args: None | list[Any] = None,
+        has_kwargs: None | dict[str, Any] = None,
+    ) -> CollectionOfNodes:
+        # has_args = has_args or []
+        has_kwargs = has_kwargs or {}
         nodes = self.search(m.Call(func=m.Name(value=func_name) if func_name else m.DoNotCare()))
+
+        for arg in has_args or []:
+            nodes = nodes.search(
+                m.Arg(keyword=None),
+                partial(lambda value, node: node.value.match(value), arg),
+            ).parent()
+
+        for kw_name, kw_value in has_kwargs.items():
+            nodes = nodes.search(
+                m.Arg(keyword=m.Name(value=kw_name)),
+                partial(lambda value, node: node.value.match(value), kw_value),
+            ).parent()
+
         return nodes
 
     def find_import(self, module: list[str]):
@@ -109,9 +130,6 @@ class CollectionOfNodes:
             )
 
         return self.filter(item)
-
-        # msg = f"{item} of {type(item)=} not implemented/allowed"
-        # raise NotImplementedError(msg)
 
     def __getattr__(self, item) -> CollectionOfNodes:
         results: list[str] = []
@@ -211,9 +229,7 @@ class Query(CollectionOfNodes):
 
         self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
-        self.__extended_nodes: Mapping[cst.CSTNode, CSTQExtendedNode] = self.wrapper.resolve(
-            CSTQExtendedNode.provider(root=self)
-        )
+        self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = CSTQExtendedNode.map_module(self)
 
         CollectionOfNodes.__init__(self, [self.get_node_id(self.module)], self)
 
