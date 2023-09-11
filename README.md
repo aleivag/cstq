@@ -27,17 +27,17 @@ To start working with cstq, you can pass the path to a Python file or pass the m
 ```python
 
 In [1]: from cstq import Query
-
-        q = Query("""
-        import sys
-
-        def main() -> None:
-            import os
-            print('hello world' if os.environ.get("USER") else "who are you?")
-
-        if __name__ == "__main__":
-            main()
-        """)
+   ...: 
+   ...: q = Query("""
+   ...: import sys
+   ...: 
+   ...: def main() -> None:
+   ...:     import os
+   ...:     print('hello world' if os.environ.get("USER") else "who are you?")
+   ...: 
+   ...: if __name__ == "__main__":
+   ...:     main()
+   ...: """)
 ```
 
 Now lets get down to business
@@ -267,9 +267,9 @@ you can replace a node with another one
 # and then lets use that node to replace the "import" on our module.
 
 In [23]: import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
-         q.search(m.Import()).replace(import_from)
-
-         q.code()
+    ...: q.search(m.Import()).replace(import_from)
+    ...: 
+    ...: q.code()
 
 Out[23]: 
 def main() -> None:
@@ -285,7 +285,7 @@ if __name__ == "__main__":
 
 
 In [24]: import libcst as cst
-         q.change(lambda n: n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
+    ...: q.change(lambda n: n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
 
 Out[24]: <CollectionOfNodes nodes=['$(Module)']>
 ```

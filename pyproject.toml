@@ -40,7 +40,7 @@ dependencies = [
   "pytest",
   "ipython",
   "jupyter",
-  "dumas",
+  "dumas>=0.0.2",
 ]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
