@@ -28,7 +28,8 @@ To start working with cstq, you can pass the path to a Python file or pass the m
 
 In [1]: from cstq import Query
    ...: 
-   ...: q = Query("""
+   ...: q = Query(
+   ...:     """
    ...: import sys
    ...: 
    ...: def main() -> None:
@@ -37,7 +38,8 @@ In [1]: from cstq import Query
    ...: 
    ...: if __name__ == "__main__":
    ...:     main()
-   ...: """)
+   ...: """
+   ...: )
 ```
 
 Now lets get down to business
@@ -54,11 +56,13 @@ You can navigate by referencing attributes directly.
 
 In [2]: q
 
+
 Out[2]: <CollectionOfNodes nodes=['$(Module)']>
 ```
 ```python
 
 In [3]: q.body
+
 
 Out[3]: <CollectionOfNodes nodes=['$(Module).body']>
 ```
@@ -66,11 +70,13 @@ Out[3]: <CollectionOfNodes nodes=['$(Module).body']>
 
 In [4]: q.body[:]
 
+
 Out[4]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine)', '$(Module).body[1](FunctionDef)', '$(Module).body[2](If)']>
 ```
 ```python
 
 In [5]: q.body[0].body[:]
+
 
 Out[5]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Import)']>
 ```
@@ -79,6 +85,7 @@ and then get the node (and the code) back as
 ```python
 
 In [6]: q.body[0].body[0].node()
+
 
 Out[6]: Import(
     names=[
@@ -103,12 +110,14 @@ Out[6]: Import(
 
 In [7]: q.body[0].body[0].code_for_node()
 
+
 Out[7]: import sys
 ```
 
 ```python
 
 In [8]: q.body[0].body[:].names[0].name.node()
+
 
 Out[8]: Name(
     value='sys',
@@ -132,6 +141,7 @@ In [9]: import libcst.matchers as m
 
 In [10]: q.body[:]
 
+
 Out[10]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine)', '$(Module).body[1](FunctionDef)', '$(Module).body[2](If)']>
 ```
 
@@ -139,12 +149,14 @@ Out[10]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine)', '$(
 # filter out function definitions using explicit filter
 In [11]: q.body[:].filter(m.FunctionDef())
 
+
 Out[11]: <CollectionOfNodes nodes=['$(Module).body[1](FunctionDef)']>
 ```
 
 ```python
 # filter out function definitions using implicit filter
 In [12]: q.body[m.FunctionDef()]
+
 
 Out[12]: <CollectionOfNodes nodes=['$(Module).body[1](FunctionDef)']>
 ```
@@ -162,6 +174,7 @@ to `.filter`, it accepts a `libcst.matchers` or a callback.
 
 In [13]: q.search(m.Import())
 
+
 Out[13]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Import)', '$(Module).body[1](FunctionDef).body(IndentedBlock).body[0](SimpleStatementLine).body[0](Import)']>
 ```
 
@@ -170,12 +183,14 @@ Out[13]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[
 # get the __name__ == "__main__" using search and filter
 In [14]: q.search(m.If()).filter(lambda n: n.test.code() == '__name__ == "__main__"')
 
+
 Out[14]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 ```
 
 ```python
 # combining multiple search and filters into a single statement 
 In [15]: q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
+
 
 Out[15]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 ```
@@ -210,6 +225,7 @@ defined to have 1 empty line as a header, and the funtion def has the leading_li
 
 In [18]: q.header[:].node()
 
+
 Out[18]: EmptyLine(
     indent=True,
     whitespace=SimpleWhitespace(
@@ -226,12 +242,14 @@ Out[18]: EmptyLine(
 
 In [19]: q.body[0]
 
+
 Out[19]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
 ```python
 
 In [20]: q.body[0].leading_lines[:].node()
+
 
 Out[20]: EmptyLine(
     indent=True,
@@ -252,6 +270,7 @@ Let's address this by simply changing the attribute `leading_lines` in that func
 
 In [21]: q.body[0].change(leading_lines=[])
 
+
 Out[21]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
@@ -271,6 +290,7 @@ In [23]: import_from = Query("from python_wrapper import os").search(m.ImportFro
     ...: 
     ...: q.code()
 
+
 Out[23]: 
 def main() -> None:
     from python_wrapper import os
@@ -285,7 +305,13 @@ if __name__ == "__main__":
 
 
 In [24]: import libcst as cst
-    ...: q.change(lambda n: n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
+    ...: 
+    ...: q.change(
+    ...:     lambda n: n.with_changes(
+    ...:         body=[cst.SimpleStatementLine(body=[import_from]), *n.body]
+    ...:     )
+    ...: )
+
 
 Out[24]: <CollectionOfNodes nodes=['$(Module)']>
 ```
@@ -296,6 +322,7 @@ In [25]: q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
 ```python
 # Let's print the result
 In [26]: q.code()
+
 
 Out[26]: 
 from python_wrapper import os
