@@ -39,7 +39,8 @@ dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
   "ipython",
-  "jupyter"
+  "jupyter",
+  "dumas",
 ]
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
@@ -51,6 +52,9 @@ cov-report = [
 cov = [
   "test-cov",
   "cov-report",
+]
+docs = [
+  "dumas render-dir docs --output-dir ."
 ]
 
 [[tool.hatch.envs.all.matrix]]
@@ -78,6 +82,7 @@ fmt = [
   "ruff --fix {args:src/cstq tests}",
   "style",
 ]
+
 all = [
   "fmt",
   "typing",
