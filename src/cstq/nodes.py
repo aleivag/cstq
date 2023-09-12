@@ -73,6 +73,8 @@ class CSTQExtendedNode:
 @dataclass(frozen=True)
 class CSTQRange(cst.CSTNode):
     elems: Sequence[cst.CSTNode]
+    parent: cst.CSTNode
+    attribute: str
 
     def _codegen_impl(
         self,
@@ -95,3 +97,6 @@ class CSTQRange(cst.CSTNode):
 
     def __iter__(self):
         return iter(self.elems)
+
+    def insert(self, index, node):
+        ...

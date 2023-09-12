@@ -110,3 +110,21 @@ def test_change_oncall(simple_bzl):
     arg_0 = oncall_func.args[0]
     arg_0.value.change(value='"new_oncall"')
     assert q.code() == simple_bzl.replace("there_is_no_oncall", "new_oncall")
+
+
+def test_replace_oncall(simple_bzl):
+    q = Query(simple_bzl)
+    oncall_func = q.find_function_call(func_name="oncall")
+    comment = Query("noop()").body[0].node()
+    oncall_func.replace(comment)
+    assert "oncall(" not in q.code()
+    assert "noop()" in q.code()
+
+
+def test_replace_oncall_collection(simple_bzl):
+    q = Query(simple_bzl)
+    oncall_func = q.find_function_call(func_name="oncall")
+    comment = Query("noop()").body[0]
+    oncall_func.replace(comment)
+    assert "oncall(" not in q.code()
+    assert "noop()" in q.code()

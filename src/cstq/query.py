@@ -7,7 +7,7 @@ from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
 import libcst as cst
 import libcst.matchers as m
 
-from cstq.csttraformers import ReplaceNodeTransformer
+from cstq.csttraformers import ReplaceNodeTransformer, InserterNodeTransformer, InsertMode
 from cstq.cstvisitors import Extractor
 from cstq.matchers import matcher
 from cstq.node2id import NodeIDProvider
@@ -155,7 +155,7 @@ class CollectionOfNodes:
         return len(self.__node_ids)
 
     def change(self, *arg, **kwargs) -> CollectionOfNodes:
-        assert len(arg) < 2, "should probide only one callable"
+        assert len(arg) < 2, "should provide only one callable"
         if arg:
             callable_ = arg[0]
         else:
@@ -170,9 +170,66 @@ class CollectionOfNodes:
             self.root,
         )
 
-    def replace(self, new_node: cst.CSTNode | cst.RemovalSentinel) -> CollectionOfNodes:
+    def replace(self, new_node: cst.CSTNode | cst.RemovalSentinel| CollectionOfNodes) -> CollectionOfNodes:
+        if isinstance(new_node, CollectionOfNodes):
+            return self.replace(new_node.node())
+
         new_node_ids = self.root.replace_nodes({node_id: new_node for node_id in self.__node_ids})
         return CollectionOfNodes([new_id for new_id in new_node_ids if new_id], self.root)
+
+    def insert(self, index: int, object: cst.CSTNode | CSTQExtendedNode | CollectionOfNodes) -> None:
+        if isinstance(object, CollectionOfNodes):
+            return self.insert(index=index, object=object.node())
+
+        nodes = self.nodes()
+        assert all(isinstance(node, CSTQRange) for node in nodes), "all nodes need to be a instance of a CSTQRange"
+
+        transformer = InserterNodeTransformer()
+        for node in nodes:
+            transformer.add_inserter(
+                node_id=self.root.get_node_id(node.parent),
+                attribute=node.attribute,
+                index=index,
+                node=object,
+                mode=InsertMode.insert,
+            )
+        self.root.transform(transformer)
+
+    def append(self, object: cst.CSTNode | CSTQExtendedNode) -> None:
+        if isinstance(object, CollectionOfNodes):
+            return self.append(object=object.node())
+
+        nodes = self.nodes()
+        assert all(isinstance(node, CSTQRange) for node in nodes), "all nodes need to be a instance of a CSTQRange"
+
+        transformer = InserterNodeTransformer()
+        for node in nodes:
+            transformer.add_inserter(
+                node_id=self.root.get_node_id(node.parent),
+                attribute=node.attribute,
+                index=-1,
+                node=object,
+                mode=InsertMode.append,
+            )
+        self.root.transform(transformer)
+
+    def extend(self, iterable: list[cst.CSTNode | CSTQExtendedNode | CSTQRange] | CollectionOfNodes) -> None:
+        if isinstance(iterable, CollectionOfNodes):
+            return self.extend(iterable.nodes())
+
+        nodes = self.nodes()
+        assert all(isinstance(node, CSTQRange) for node in nodes), "all nodes need to be a instance of a CSTQRange"
+
+        transformer = InserterNodeTransformer()
+        for node in nodes:
+            transformer.add_inserter(
+                node_id=self.root.get_node_id(node.parent),
+                attribute=node.attribute,
+                index=-1,
+                node=iterable,
+                mode=InsertMode.extend,
+            )
+        self.root.transform(transformer)
 
     def remove(self) -> CollectionOfNodes:
         return self.replace(cst.RemovalSentinel.REMOVE)
@@ -249,10 +306,13 @@ class Query(CollectionOfNodes):
         return {id_: self.get_node_by_id(id_) for id_ in ids}
 
     def replace_nodes(self, replace_map: dict[str, cst.CSTNode | cst.RemovalSentinel]):
-        mod = self.wrapper.visit(ReplaceNodeTransformer(replace_map))
-        self.__init__(mod)  # type: ignore
-
+        mod = self.transform(ReplaceNodeTransformer(replace_map))
         return [None if to_node == cst.RemovalSentinel.REMOVE else from_id for from_id, to_node in replace_map.items()]
+
+    def transform(self, transformer):
+        mod = self.wrapper.visit(transformer)
+        self.__init__(mod)  # type: ignore
+        return mod
 
     def get_parent_of_node(self, node: cst.CSTNode) -> cst.CSTNode:
         return self.wrapper.resolve(cst.metadata.ParentNodeProvider)[node]

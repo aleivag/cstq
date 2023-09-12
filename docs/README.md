@@ -136,7 +136,16 @@ and `.code()` to generate the code that node represents, soo far I haven't added
 
 ### codemod (changes)
 
-If you want to change nodes, it's not hard to do, for instance removing the first import would be as easy as finding it
+If you want to change your python document, it's not hard to do, we provide a couple of simple methods like
+
+* **`.change(callable, **kwargs)`**: to change the contents of a collection of nodes.
+* **`.replace(node)`**: change the collection of nodes for a new one.
+* **`.remove()`**: removes every node from the collection of nodes.
+* **`.insert(index, node)`** : if the collection of nodes are a range, this insert the node, in the position index.
+* **`.append(node)`** : add the node to the end of the range of nodes
+* **`.extend(list[node] | collection of nodes)`** :extend the range to the collection or list of nodes
+
+for instance removing the first import would be as easy as finding it
 (using any combination of `.search` and/or `.filter`) and then call `.remove()`
 
 ```dumas[python]
@@ -144,10 +153,8 @@ q.body[0].body[0].remove()
 ```
 
 ```dumas[python]
-
 # print the code on top
-print(q.code())
-
+q.code()
 ```
 
 As you can see, there are several empty lines at the top. This is because of 2 things, first the module object is 
@@ -170,12 +177,19 @@ Let's address this by simply changing the attribute `leading_lines` in that func
 
 ```dumas[python]
 q.body[0].change(leading_lines=[])
-
-
 ```
 
 ```dumas[python]
-print(q.code())
+q.code()
+```
+
+for more complex changes, instead of passing the attributes to change, you can pass a callback
+
+
+```dumas[python]
+# reverse the order of leading lines
+
+q.body[0].change(lambda node: node.with_changes(leading_lines=node.leading_lines[::-1]))
 ```
 
 you can replace a node with another one
@@ -186,19 +200,20 @@ you can replace a node with another one
 # and then lets use that node to replace the "import" on our module.
 
 import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
-q.search(m.Import()).replace(import_from)
 
+q.search(m.Import()).replace(import_from)
 q.code()
 ```
 
+To add a import at the top of the file, we can `.insert` the new node at the top, like this
 
 ```dumas[python]
 # Let's add the import at the top level
 
 import libcst as cst
-q.change(lambda n: n.with_changes(body=[cst.SimpleStatementLine(body=[import_from]), *n.body]))
-
+q.body.insert(0, cst.SimpleStatementLine(body=[import_from]))
 ```
+
 ```dumas[python]
 # Let's remove the inner import
 q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
@@ -206,6 +221,24 @@ q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
 ```dumas[python]
 # Let's print the result
 q.code()
+```
+
+adding a call at the end would be as easy as
+
+```dumas[python]
+# using extend to add a few lines at the end of the document
+
+EXTRA_LINES = Query(
+    """
+import my_custom_logging
+my_custom_logging.log(__file__)
+    """
+)
+
+q.body.extend(EXTRA_LINES.body[:])
+
+q.code()
+
 ```
 
 ## License

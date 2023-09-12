@@ -203,7 +203,16 @@ and `.code()` to generate the code that node represents, soo far I haven't added
 
 ### codemod (changes)
 
-If you want to change nodes, it's not hard to do, for instance removing the first import would be as easy as finding it
+If you want to change your python document, it's not hard to do, we provide a couple of simple methods like
+
+* **`.change(callable, **kwargs)`**: to change the contents of a collection of nodes.
+* **`.replace(node)`**: change the collection of nodes for a new one.
+* **`.remove()`**: removes every node from the collection of nodes.
+* **`.insert(index, node)`** : if the collection of nodes are a range, this insert the node, in the position index.
+* **`.append(node)`** : add the node to the end of the range of nodes
+* **`.extend(list[node] | collection of nodes)`** :extend the range to the collection or list of nodes
+
+for instance removing the first import would be as easy as finding it
 (using any combination of `.search` and/or `.filter`) and then call `.remove()`
 
 ```python
@@ -212,10 +221,18 @@ In [16]: q.body[0].body[0].remove()
 ```
 
 ```python
-
 # print the code on top
+In [17]: q.code()
 
-In [17]: print(q.code())
+
+Out[17]: 
+
+def main() -> None:
+    import os
+    print('hello world' if os.environ.get("USER") else "who are you?")
+
+if __name__ == "__main__":
+    main()
 ```
 
 As you can see, there are several empty lines at the top. This is because of 2 things, first the module object is
@@ -267,7 +284,6 @@ Let's address this by simply changing the attribute `leading_lines` in that func
 
 ```python
 
-
 In [21]: q.body[0].change(leading_lines=[])
 
 
@@ -276,7 +292,27 @@ Out[21]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 
 ```python
 
-In [22]: print(q.code())
+In [22]: q.code()
+
+
+Out[22]: 
+def main() -> None:
+    import os
+    print('hello world' if os.environ.get("USER") else "who are you?")
+
+if __name__ == "__main__":
+    main()
+```
+
+for more complex changes, instead of passing the attributes to change, you can pass a callback
+
+```python
+# reverse the order of leading lines
+
+In [23]: q.body[0].change(lambda node: node.with_changes(leading_lines=node.leading_lines[::-1]))
+
+
+Out[23]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
 you can replace a node with another one
@@ -285,13 +321,13 @@ you can replace a node with another one
 # Lets create an "import from" node and using the serach and node function,
 # and then lets use that node to replace the "import" on our module.
 
-In [23]: import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
-    ...: q.search(m.Import()).replace(import_from)
+In [24]: import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
     ...: 
+    ...: q.search(m.Import()).replace(import_from)
     ...: q.code()
 
 
-Out[23]: 
+Out[24]: 
 def main() -> None:
     from python_wrapper import os
     print('hello world' if os.environ.get("USER") else "who are you?")
@@ -300,37 +336,61 @@ if __name__ == "__main__":
     main()
 ```
 
+To add a import at the top of the file, we can `.insert` the new node at the top, like this
+
 ```python
 # Let's add the import at the top level
 
-
-In [24]: import libcst as cst
+In [25]: import libcst as cst
     ...: 
-    ...: q.change(
-    ...:     lambda n: n.with_changes(
-    ...:         body=[cst.SimpleStatementLine(body=[import_from]), *n.body]
-    ...:     )
-    ...: )
-
-
-Out[24]: <CollectionOfNodes nodes=['$(Module)']>
+    ...: q.body.insert(0, cst.SimpleStatementLine(body=[import_from]))
 ```
+
 ```python
 # Let's remove the inner import
-In [25]: q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
+In [26]: q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
 ```
 ```python
 # Let's print the result
-In [26]: q.code()
+In [27]: q.code()
 
 
-Out[26]: 
+Out[27]: 
 from python_wrapper import os
 def main() -> None:
     print('hello world' if os.environ.get("USER") else "who are you?")
 
 if __name__ == "__main__":
     main()
+```
+
+adding a call at the end would be as easy as
+
+```python
+# using extend to add a few lines at the end of the document
+
+
+In [28]: EXTRA_LINES = Query(
+    ...:     """
+    ...: import my_custom_logging
+    ...: my_custom_logging.log(__file__)
+    ...:     """
+    ...: )
+    ...: 
+    ...: q.body.extend(EXTRA_LINES.body[:])
+    ...: 
+    ...: q.code()
+
+
+Out[28]: 
+from python_wrapper import os
+def main() -> None:
+    print('hello world' if os.environ.get("USER") else "who are you?")
+
+if __name__ == "__main__":
+    main()
+import my_custom_logging
+my_custom_logging.log(__file__)
 ```
 
 ## License
