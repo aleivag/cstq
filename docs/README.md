@@ -55,12 +55,21 @@ You can navigate by referencing attributes directly.
 q
 ```
 ```dumas[python]
+# access the body attribute of the main module
 q.body
 ```
 ```dumas[python]
+# you can get all elements
 q.body[:]
 ```
 ```dumas[python]
+# and get the body element of every element in the body of module 
+# (if they have one)
+q.body[:].body  
+```
+
+```dumas[python]
+# or just the body elements of the first element of the module
 q.body[0].body[:]
 ```
 and then get the node (and the code) back as
@@ -70,6 +79,7 @@ q.body[0].body[0].node()
 ```
 
 ```dumas[python]
+# and then get the code for that node
 q.body[0].body[0].code_for_node()
 ```
 
