@@ -5,7 +5,8 @@
 
 * * *
 
-A very simple and, at least according to the author, intuitive library to navigate Python source code, and code modeling.
+A very simple and, at least according to the author, intuitive library to navigate Python source code, and code modeling
+based on [libcst](https://github.com/Instagram/LibCST).
 
 ## Enough said, I need some action!
 
