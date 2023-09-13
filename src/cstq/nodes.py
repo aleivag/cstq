@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, fields
 from typing import TYPE_CHECKING, NoReturn, Sequence, cast
 
@@ -62,6 +63,9 @@ class CSTQExtendedNode:
 
     def code(self, module=None) -> str:
         return (module if module else self.root.module).code_for_node(self.original_node)
+
+    def literal_eval(self):
+        return ast.literal_eval(self.code())
 
     def match(self, test):
         from cstq.matchers import match

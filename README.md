@@ -403,6 +403,56 @@ import my_custom_logging
 my_custom_logging.log(__file__)
 ```
 
+### CST to objects and object to CST
+
+One particular thing this library tries to do, its to give you many representations of the data, so you
+can interact with the source code as conformable as you can, for this sometimes you want to grab a python
+object from the source code and treat it as its regular object and then turn the result back to its
+CST representation this is not extremely hard to do 
+
+```python
+
+In [30]: from cstq import Query, obj2cst
+    ...: import libcst.matchers as m
+    ...: 
+    ...: q = Query(
+    ...:     """
+    ...: X = [1, 2, 3, "foo", 3j]
+    ...: """
+    ...: )
+    ...: 
+    ...: the_list = q.search(m.List())
+    ...: the_list
+
+
+Out[30]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Assign).value(List)']>
+```
+
+```python
+# now we can turn that cst.List object into a python list using using `literal_eval_for_node`
+
+In [31]: real_list = the_list.literal_eval_for_node()
+    ...: f"type({real_list}) = {type(real_list)} "
+
+
+Out[31]: type([1, 2, 3, 'foo', 3j]) = <class 'list'> 
+```
+
+```python
+# lets remove non integers for it and lets write it back to the cst
+
+
+In [32]: only_int_list = obj2cst([e for e in real_list if isinstance(e, int)])
+    ...: 
+    ...: the_list.replace(only_int_list)
+    ...: 
+    ...: q.code()
+
+
+Out[32]: 
+X = [1, 2, 3]
+```
+
 ## License
 
 `cstq` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

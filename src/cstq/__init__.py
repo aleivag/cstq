@@ -3,5 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 from cstq.query import Query
+from cstq.obj2cst import obj2cst
 
-__all__ = ["Query"]
+__all__ = ["Query", "obj2cst"]

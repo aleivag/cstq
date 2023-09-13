@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
-
+import ast
 import libcst as cst
 import libcst.matchers as m
 
@@ -276,6 +276,13 @@ class CollectionOfNodes:
 
     def code_for_node(self) -> str:
         return self.root.module.code_for_node(self.node())
+
+    def literal_eval_for_node(self):
+        return ast.literal_eval(self.code_for_node())
+
+    def literal_eval_for_nodes(self):
+        return [
+            ast.literal_eval(self.root.module.code_for_node(node)) for node in self.nodes()]
 
 
 class Query(CollectionOfNodes):

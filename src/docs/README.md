@@ -252,6 +252,51 @@ q.code()
 
 ```
 
+### CST to objects and object to CST
+
+One particular thing this library tries to do, its to give you many representations of the data, so you
+can interact with the source code as conformable as you can, for this sometimes you want to grab a python
+object from the source code and treat it as its regular object and then turn the result back to its 
+CST representation this is not extremely hard to do 
+
+```dumas[python]
+
+from cstq import Query, obj2cst
+import libcst.matchers as m
+
+q = Query("""
+X = [1, 2, 3, "foo", 3j]
+""")
+
+the_list= q.search(m.List())
+the_list
+```
+
+
+```dumas[python]
+# now we can turn that cst.List object into a python list using using `literal_eval_for_node`
+
+real_list = the_list.literal_eval_for_node()
+f"type({real_list}) = {type(real_list)} "
+```
+
+```dumas[python]
+# lets remove non integers for it and lets write it back to the cst
+
+only_int_list = obj2cst(
+[
+    e for e in real_list if isinstance(e, int)
+]
+)
+
+the_list.replace(only_int_list)
+
+q.code()
+
+```
+
+
+
 ## License
 
 `cstq` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

@@ -54,7 +54,7 @@ cov = [
   "cov-report",
 ]
 docs = [
-  "dumas render-dir docs --output-dir ."
+  "dumas render-dir src/docs --output-dir ."
 ]
 
 [[tool.hatch.envs.all.matrix]]
