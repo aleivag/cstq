@@ -170,7 +170,7 @@ class CollectionOfNodes:
             self.root,
         )
 
-    def replace(self, new_node: cst.CSTNode | cst.RemovalSentinel| CollectionOfNodes) -> CollectionOfNodes:
+    def replace(self, new_node: cst.CSTNode | cst.RemovalSentinel | CollectionOfNodes) -> CollectionOfNodes:
         if isinstance(new_node, CollectionOfNodes):
             return self.replace(new_node.node())
 
@@ -281,8 +281,7 @@ class CollectionOfNodes:
         return ast.literal_eval(self.code_for_node())
 
     def literal_eval_for_nodes(self):
-        return [
-            ast.literal_eval(self.root.module.code_for_node(node)) for node in self.nodes()]
+        return [ast.literal_eval(self.root.module.code_for_node(node)) for node in self.nodes()]
 
 
 class Query(CollectionOfNodes):

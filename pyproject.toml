@@ -63,7 +63,7 @@ python = ["3.10", "3.11"]
 [tool.hatch.envs.lint]
 detached = true
 dependencies = [
-  "black>=23.1.0",
+  "black>=23.9.1",
   "mypy>=1.0.0",
   "ruff>=0.0.243",
   "isort",
