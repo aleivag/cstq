@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, fields
+from functools import partial
 from typing import TYPE_CHECKING, NoReturn, Sequence, cast
 
 import libcst as cst
@@ -12,13 +13,23 @@ if TYPE_CHECKING:
     import cstq
 
 
+@dataclass(frozen=True)
 class CSTQExtendedNode:
     root: cstq.query.Query
     original_node: cst.CSTNode
 
+    def get_original_node_attr(self, attr):
+        node = getattr(self.original_node, attr)
+        if isinstance(node, tuple):
+            return (CSTQExtendedNode.from_node(e, e, self.root) for e in node)
+        if isinstance(node, cst.CSTNode):
+            return CSTQExtendedNode.from_node(node, node, self.root)
+        return node
+
     @classmethod
     def from_node(cls, node: cst.CSTNode, original_node: cst.CSTNode, root: cstq.query.Query) -> CSTQExtendedNode:
         node_cls = node.__class__
+        original_fields = tuple(field.name for field in fields(node))
         extended_node_cls = type(
             node_cls.__name__,
             (cls, node_cls),
@@ -29,15 +40,21 @@ class CSTQExtendedNode:
                 "__name__": node_cls.__name__,
                 "__qualname__": node_cls.__qualname__,
                 "__doc__": node_cls.__doc__,
-                "__annotations__": {**node_cls.__annotations__, "root": None, "original_node": None},
+                "__annotations__": {
+                    "root": None,
+                    "original_node": None,
+                },
+                **{
+                    field: property(fget=partial(cls.get_original_node_attr, attr=field)) for field in original_fields
+                },
             },
         )
-        dataclass(frozen=True)(extended_node_cls)
+        # dataclass(frozen=True)(extended_node_cls)
 
         return cast(
             CSTQExtendedNode,
             extended_node_cls(
-                **{field.name: getattr(node, field.name) for field in fields(node)},
+                # **{field.name: getattr(node, field.name) for field in fields(node)},
                 root=root,
                 original_node=original_node,
             ),

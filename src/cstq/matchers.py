@@ -19,17 +19,19 @@ def match(
     test: MATCH_INPUT | list[MATCH_INPUT] | tuple[MATCH_INPUT, ...],
     root: "cstq.query.Query",
 ) -> bool:
+    if isinstance(test, m.BaseMatcherNode):
+        return m.matches(node, test)
+
+    if isinstance(test, (list, tuple)):
+        return all(match(node, t, root) for t in test)
+
     if not isinstance(node, cstq.nodes.CSTQExtendedNode):
         node = root.get_extended_node(node)
 
-    if isinstance(test, m.BaseMatcherNode):
-        return m.matches(node.original_node, test)
-    elif callable(test):
+    if callable(test):
         return test(node)
     elif isinstance(test, cst.CSTNode):
         return node.original_node.deep_equals(test)
-    elif isinstance(test, (list, tuple)):
-        return all(match(node, t, root) for t in test)
     else:
         return test == node
 
