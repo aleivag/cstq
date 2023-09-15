@@ -18,17 +18,26 @@ class CSTQExtendedNode:
     root: cstq.query.Query
     original_node: cst.CSTNode
 
+    __registered_class = {}
+
     def get_original_node_attr(self, attr):
         node = getattr(self.original_node, attr)
         if isinstance(node, tuple):
-            return (CSTQExtendedNode.from_node(e, e, self.root) for e in node)
+            return (self.root.get_extended_node(e) for e in node)
         if isinstance(node, cst.CSTNode):
-            return CSTQExtendedNode.from_node(node, node, self.root)
+            return self.root.get_extended_node(node)
         return node
 
     @classmethod
-    def from_node(cls, node: cst.CSTNode, original_node: cst.CSTNode, root: cstq.query.Query) -> CSTQExtendedNode:
-        node_cls = node.__class__
+    def register_type(cls, rcls):
+        bclass = rcls.mro()[1]
+        cls.__registered_class[bclass] = rcls
+        return rcls
+
+    @classmethod
+    def from_node(cls, node: cst.CSTNode, root: cstq.query.Query) -> CSTQExtendedNode:
+        node_cls = cls.__registered_class.get(node.__class__, node.__class__)
+
         original_fields = tuple(field.name for field in fields(node))
         extended_node_cls = type(
             node_cls.__name__,
@@ -44,9 +53,7 @@ class CSTQExtendedNode:
                     "root": None,
                     "original_node": None,
                 },
-                **{
-                    field: property(fget=partial(cls.get_original_node_attr, attr=field)) for field in original_fields
-                },
+                **{field: property(fget=partial(cls.get_original_node_attr, attr=field)) for field in original_fields},
             },
         )
         # dataclass(frozen=True)(extended_node_cls)
@@ -56,7 +63,7 @@ class CSTQExtendedNode:
             extended_node_cls(
                 # **{field.name: getattr(node, field.name) for field in fields(node)},
                 root=root,
-                original_node=original_node,
+                original_node=node,
             ),
         )
 
@@ -88,6 +95,21 @@ class CSTQExtendedNode:
         from cstq.matchers import match
 
         return match(self, test, self.root)
+
+
+@CSTQExtendedNode.register_type
+class Call(cst.Call):
+    """
+    Wrapper around cst.Call that helps the retrieval of kwargs and pos args
+    """
+
+    @property
+    def positional_args(self):
+        return tuple([arg.value for arg in self.args if not arg.keyword])
+
+    @property
+    def keyword_args(self):
+        return {arg.keyword.value: arg.value for arg in self.args if arg.keyword}
 
 
 @add_slots

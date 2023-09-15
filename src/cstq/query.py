@@ -292,11 +292,14 @@ class Query(CollectionOfNodes):
 
         self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
+        self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = {}
 
         CollectionOfNodes.__init__(self, [self.get_node_id(self.module)], self)
 
     def get_extended_node(self, node: cst.CSTNode) -> CSTQExtendedNode:
-        return CSTQExtendedNode.from_node(node, node, self)
+        if node not in self.__extended_nodes:
+            self.__extended_nodes[node] = CSTQExtendedNode.from_node(node, self)
+        return self.__extended_nodes[node]
 
     def get_node_id(self, node: cst.CSTNode) -> str:
         return self.__node_to_id[node]
