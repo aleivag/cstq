@@ -1,6 +1,6 @@
-import libcst as cst
 from functools import singledispatch
 
+import libcst as cst
 
 @singledispatch
 def obj2cst(obj):
@@ -10,7 +10,8 @@ def obj2cst(obj):
     """
     if obj is None:
         return cst.Name(value="None")
-    raise NotImplementedError(f"{type(obj)=} is not supported for cst conversion")
+    msg = f"{type(obj)=} is not supported for cst conversion"
+    raise NotImplementedError(msg)
 
 
 @obj2cst.register(list)
@@ -29,6 +30,9 @@ def _(obj):
 @obj2cst.register(str)
 @obj2cst.register(bytes)
 def _(obj):
+    # I would really love to use https://github.com/psf/black/blob/main/src/black/strings.py#L173
+    # black.strings.normalize_string_quotes, but don't want to pull so many dependencies
+    # so I can just have my string "double quoted".
     return cst.SimpleString(value=repr(obj))
 
 

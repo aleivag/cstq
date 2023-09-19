@@ -77,9 +77,9 @@ style = [
   "black --check --diff {args:src/cstq tests}",
 ]
 fmt = [
-  "black {args:src/cstq tests}",
-  "isort {args:src/cstq tests}",
-  "ruff --fix {args:src/cstq tests}",
+  "black {args:src/cstq src/cstq/nodes tests}",
+  "isort {args:src/cstq src/cstq/nodes tests}",
+  "ruff --fix {args:src/cstq src/cstq/nodes tests}",
   "style",
 ]
 

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import ast
 from functools import partial, singledispatch
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
-import ast
+
 import libcst as cst
 import libcst.matchers as m
 
-from cstq.csttraformers import ReplaceNodeTransformer, InserterNodeTransformer, InsertMode
+from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
 from cstq.matchers import matcher
 from cstq.node2id import NodeIDProvider
@@ -165,7 +166,7 @@ class CollectionOfNodes:
 
         return CollectionOfNodes(
             self.root.replace_nodes(
-                {node_id: callable_(node).with_changes(**kwargs) for node_id, node in self.__nodes.items()}
+                {node_id: callable_(self.root.get_extended_node(node)).with_changes(**kwargs) for node_id, node in self.__nodes.items()}
             ),
             self.root,
         )
@@ -314,7 +315,7 @@ class Query(CollectionOfNodes):
         return {id_: self.get_node_by_id(id_) for id_ in ids}
 
     def replace_nodes(self, replace_map: dict[str, cst.CSTNode | cst.RemovalSentinel]):
-        mod = self.transform(ReplaceNodeTransformer(replace_map))
+        self.transform(ReplaceNodeTransformer(replace_map))
         return [None if to_node == cst.RemovalSentinel.REMOVE else from_id for from_id, to_node in replace_map.items()]
 
     def transform(self, transformer):
@@ -331,8 +332,14 @@ class Query(CollectionOfNodes):
     def write(self, path: Path) -> int:
         return path.write_text(self.code())
 
-    def collection(self, nodes: cst.CSTNode):
-        return CollectionOfNodes([self.get_node_id(nodes)], self.root)
+    def collection(self, node_ids: list[str]) -> CollectionOfNodes:
+        return CollectionOfNodes(node_ids, self.root)
+
+    def collection_for_nodes(self, nodes: list[cst.CSTNode]):
+        return self.create_collection(
+            [self.get_node_id(node) for node in nodes],
+            self.root,
+        )
 
 
 @singledispatch

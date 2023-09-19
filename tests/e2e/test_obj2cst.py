@@ -1,5 +1,6 @@
-from cstq import obj2cst, Query
 import libcst.matchers as m
+
+from cstq import Query, obj2cst
 
 
 def test_int():

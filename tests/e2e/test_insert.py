@@ -1,5 +1,6 @@
-from cstq import Query
 import libcst.matchers as m
+
+from cstq import Query
 
 MODULE = """
 import sys
@@ -36,7 +37,7 @@ def test_convert_id_main_into_main_call():
     if_node = q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"').node()
     new_q = Query(
         """
-    
+
 def main() -> None:
     ...
 
