@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass, fields
 from functools import partial
-from typing import TYPE_CHECKING, cast, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import libcst as cst
 
@@ -97,12 +97,3 @@ class CSTQExtendedNode:
 
     def with_changes(self, **changes: Any) -> cst.CSTNode:
         return self.node().with_changes(**changes)
-
-
-
-
-
-
-
-
-

@@ -166,7 +166,10 @@ class CollectionOfNodes:
 
         return CollectionOfNodes(
             self.root.replace_nodes(
-                {node_id: callable_(self.root.get_extended_node(node)).with_changes(**kwargs) for node_id, node in self.__nodes.items()}
+                {
+                    node_id: callable_(self.root.get_extended_node(node)).with_changes(**kwargs)
+                    for node_id, node in self.__nodes.items()
+                }
             ),
             self.root,
         )

@@ -1,5 +1,5 @@
-import libcst.matchers as m
 import libcst as cst
+import libcst.matchers as m
 
 from cstq import Query
 
@@ -47,27 +47,26 @@ def test_extended_arg_get():
     q = Query("hello(1, True, None, foo='bar', baz=42)")
     hello = q.find_function_call(func_name="hello").extended_node()
     assert hello.positional_args[0].literal_eval() == 1
-    assert hello.positional_args[1].literal_eval() == True
-    assert hello.positional_args[2].literal_eval() == None
-
+    assert hello.positional_args[1].literal_eval() is True
+    assert hello.positional_args[2].literal_eval() is None
 
 
 def test_extended_arg_set():
     q = Query("hello(1, True, None, foo='bar', baz=42)")
     hello = q.find_function_call(func_name="hello").extended_node()
     hello.positional_args[0] = cst.Name("object")
-    assert q.code() =="hello(object, True, None, foo='bar', baz=42)"
+    assert q.code() == "hello(object, True, None, foo='bar', baz=42)"
 
 
 def test_extended_arg_del():
     q = Query("hello(1, True, None, foo='bar', baz=42)")
     hello = q.find_function_call(func_name="hello").extended_node()
     del hello.positional_args[0]
-    assert q.code() =="hello(True, None, foo='bar', baz=42)"
+    assert q.code() == "hello(True, None, foo='bar', baz=42)"
 
 
 def test_extended_arg_insert():
     q = Query("hello(1, True, None, foo='bar', baz=42)")
     hello = q.find_function_call(func_name="hello").extended_node()
     hello.positional_args.insert(0, cst.Name("object"))
-    assert q.code() =="hello(object, 1, True, None, foo='bar', baz=42)"
+    assert q.code() == "hello(object, 1, True, None, foo='bar', baz=42)"

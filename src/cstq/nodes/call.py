@@ -4,6 +4,7 @@ import libcst as cst
 
 from cstq.nodes.extended import CSTQExtendedNode
 
+
 class Positional(MutableSequence):
     def __init__(self, node: CSTQExtendedNode):
         self.node = node
@@ -17,25 +18,23 @@ class Positional(MutableSequence):
 
     def __setitem__(self, key, value):
         self.__sequence[key].value.replace(value)
+
     def __delitem__(self, key):
         self.__sequence[key].remove()
+
     def __len__(self):
         return len(self.__sequence)
 
     def insert(self, index: int, value: cst.CSTNode) -> None:
         seq = list(self.__sequence)
         seq.insert(index, cst.Arg(value=value))
-        new_args = [
-                *seq,
-                *(arg for arg in self.node.args if arg.keyword)
-            ]
+        new_args = [*seq, *(arg for arg in self.node.args if arg.keyword)]
         # raise Exception(f"""{[
         #                          *seq,
         #                          *(arg for arg in self.node.args if arg.keyword)
         #                      ]}""")
-        self.node.change(
-            args=[getattr(n, "node", lambda :n)() for n in new_args]
-        )
+        self.node.change(args=[getattr(n, "node", lambda: n)() for n in new_args])
+
 
 class Keywords(MutableMapping):
     def __init__(self, node: CSTQExtendedNode):
@@ -82,7 +81,6 @@ class Call(cst.Call):
     @property
     def positional_args(self):
         return Positional(self)
-
 
     @property
     def keyword_args(self):

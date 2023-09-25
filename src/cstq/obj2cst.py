@@ -2,6 +2,7 @@ from functools import singledispatch
 
 import libcst as cst
 
+
 @singledispatch
 def obj2cst(obj):
     """
