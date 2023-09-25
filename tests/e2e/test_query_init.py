@@ -54,3 +54,15 @@ two = one + one
     """.strip()
     ).write(test_file)
     assert test_file.read_text() == mod_text
+
+
+def test_no_bool(tmp_path):
+
+    q = Query(
+        "foo=42"
+    )
+    u = q.pop
+    if u:
+        raise Exception(f"we should be False!!!, {u}, {bool(u)}, {len(u)}")
+
+

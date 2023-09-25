@@ -11,6 +11,7 @@ import libcst.matchers as m
 from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
 from cstq.matchers import matcher
+from cstq.matchers_helpers import build_attribute_matcher
 from cstq.node2id import NodeIDProvider
 from cstq.nodes import CSTQExtendedNode, CSTQRange
 
@@ -86,28 +87,16 @@ class CollectionOfNodes:
 
         return nodes
 
-    def find_import(self, module: list[str]):
-        left_module_parts = [*module]
-        module_match: m.BaseMatcherNode | m.DoNotCareSentinel
-
-        if len(left_module_parts) == 1:
-            module_match = m.Name(value=left_module_parts[0])
-
-        elif len(left_module_parts) > 2:
-            value = left_module_parts.pop(0)
-            attr = left_module_parts.pop(0)
-            attribute_match_test = m.Attribute(value=m.Name(value), attr=m.Name(attr))
-
-            while left_module_parts:
-                attribute_match_test = m.Attribute(value=attribute_match_test, attr=m.Name(left_module_parts.pop(0)))
-
-            module_match = attribute_match_test
-
-        else:
-            module_match = m.DoNotCare()
-
+    def find_import_from(self, module: list[str]):
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()
         return self.search(m.ImportFrom(module=module_match))
 
+    def find_import_alias(self, module: list[str]):
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()
+        return self.search(m.ImportAlias(name = module_match))
+
+    def __bool__(self):
+        return bool(self.__len__())
     def __or__(self, other):
         assert self.root == other.root, "Both collections must have the same root"
         return CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)
