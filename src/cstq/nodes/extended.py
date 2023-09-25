@@ -24,7 +24,7 @@ class CSTQExtendedNode:
     def get_original_node_attr(self, attr):
         node = getattr(self.node(), attr)
         if isinstance(node, tuple):
-            return (self.root.get_extended_node(e) for e in node)
+            return tuple(self.root.get_extended_node(e) for e in node)
         if isinstance(node, cst.CSTNode):
             return self.root.get_extended_node(node)
         return node
