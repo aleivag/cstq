@@ -87,9 +87,12 @@ class CollectionOfNodes:
 
         return nodes
 
-    def find_import_from(self, module: list[str]):
+    def find_import_from(self, module: list[str], name :None| str =None):
         module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()
-        return self.search(m.ImportFrom(module=module_match))
+        names = m.ImportAlias(name=m.Name(name)) if name else m.DoNotCare()
+        matcher = m.ImportFrom(module=module_match, names = [names])
+
+        return self.search(matcher)
 
     def find_import_alias(self, module: list[str]):
         module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()

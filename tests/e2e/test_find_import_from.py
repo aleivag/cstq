@@ -15,3 +15,16 @@ def test_cant_find_a_simple_module():
     assert len( q.find_import_from(
         module=mod
     )) == 0
+
+
+def test_find_import_with_alias():
+
+    q = Query("""
+from a.b.c import x
+from a.b.c import y
+from a.b.c import z
+""")
+    assert q.find_import_from(
+        module="a.b.c".split("."),
+        name="z"
+    ).code_for_node() == "from a.b.c import z"
