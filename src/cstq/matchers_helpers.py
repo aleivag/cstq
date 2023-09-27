@@ -16,13 +16,13 @@ MATCH_INPUT = (
 
 def build_attribute_matcher(mod):
     nmod = [*mod.copy()]
+
     def _attribute_matcher(attr, mod):
         if not mod:
             return m.Name(attr)
         else:
             value = _attribute_matcher(mod.pop(), mod)
 
-        return m.Attribute(
-            value=value, attr=m.Name(attr)
-        )
+        return m.Attribute(value=value, attr=m.Name(attr))
+
     return _attribute_matcher(nmod.pop(), nmod)

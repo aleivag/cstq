@@ -87,19 +87,24 @@ class CollectionOfNodes:
 
         return nodes
 
-    def find_import_from(self, module: list[str], name :None| str =None):
-        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()
-        names = m.ImportAlias(name=m.Name(name)) if name else m.DoNotCare()
-        matcher = m.ImportFrom(module=module_match, names = [names])
+    def find_import_from(self, module: list[str], name: None | str = None):
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
+            build_attribute_matcher(module) if module else m.DoNotCare()
+        )
+        names = [m.ImportAlias(name=m.Name(name))] if name else m.DoNotCare()
+        matcher = m.ImportFrom(module=module_match, names=names)
 
         return self.search(matcher)
 
     def find_import_alias(self, module: list[str]):
-        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = build_attribute_matcher(module) if module else m.DoNotCare()
-        return self.search(m.ImportAlias(name = module_match))
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
+            build_attribute_matcher(module) if module else m.DoNotCare()
+        )
+        return self.search(m.ImportAlias(name=module_match))
 
     def __bool__(self):
         return bool(self.__len__())
+
     def __or__(self, other):
         assert self.root == other.root, "Both collections must have the same root"
         return CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)

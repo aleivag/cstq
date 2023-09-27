@@ -57,12 +57,8 @@ two = one + one
 
 
 def test_no_bool(tmp_path):
-
-    q = Query(
-        "foo=42"
-    )
+    q = Query("foo=42")
     u = q.pop
     if u:
-        raise Exception(f"we should be False!!!, {u}, {bool(u)}, {len(u)}")
-
-
+        msg = f"we should be False!!!, {u}, {bool(u)}, {len(u)}"
+        raise Exception(msg)
