@@ -41,7 +41,9 @@ dependencies = [
   "ipython",
   "jupyter",
   "dumas>=0.0.4",
+  "later"
 ]
+
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"

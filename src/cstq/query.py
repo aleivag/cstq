@@ -61,6 +61,12 @@ class CollectionOfNodes:
             root=self.root,
         )
 
+    def find_assignment(self, variable_name: str = None) -> CollectionOfNodes:
+        nodes = self.search(m.Assign())
+        if variable_name is not None:
+            nodes = nodes.search(m.AssignTarget(target=m.Name(variable_name))).parent()
+        return nodes
+
     # find functions
     def find_function_call(
         self,
