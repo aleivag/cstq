@@ -205,6 +205,69 @@ In [16]: q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
 Out[16]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 ```
 
+### 4. finding
+
+for simplicity there are a couple of `find_*` methods that can be used to find specific structures, that makes things easier. These are
+
+* **find_assignment**: find an assigment   
+
+```python
+
+In [1]: from cstq import Query
+   ...: 
+   ...: config = Query(
+   ...:     """
+   ...: MAGIC_CONSTANTS = [
+   ...:    1, 
+   ...:    2, 
+   ...:    3, 
+   ...:    "foo", 
+   ...:    3j
+   ...: ]
+   ...: """
+   ...: )
+   ...: 
+   ...: assignment = config.find_assignment(variable_name="MAGIC_CONSTANTS")
+   ...: 
+   ...: # convert the node into an actuall python object
+   ...: assignment.value.literal_eval_for_node()
+
+
+Out[1]: [1, 2, 3, 'foo', 3j]
+```
+
+* **find_function_call**: helps finding a particular funtion call.
+
+```python
+
+In [1]: from cstq import Query
+   ...: 
+   ...: q = Query(
+   ...:     """
+   ...: x = [2,1,3]
+   ...: sx = sorted(x)
+   ...: rx = sorted(x, reverse=True)
+   ...: 
+   ...: """
+   ...: )
+   ...: 
+   ...: q.find_function_call(func_name="sorted").code_for_nodes()
+
+
+Out[1]: ['sorted(x)', 'sorted(x, reverse=True)']
+```
+```python
+
+In [2]: import libcst.matchers as m
+   ...: 
+   ...: q.find_function_call(
+   ...:     func_name="sorted", has_kwargs={"reverse": m.Name("True")}
+   ...: ).code_for_node()
+
+
+Out[2]: sorted(x, reverse=True)
+```
+
 ### using callbacks
 
 `.filter` and `.search` can take a callback method that takes an *extended version* of a CSTNode and returns true or false.

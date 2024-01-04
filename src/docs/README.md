@@ -139,6 +139,52 @@ q.search(m.If()).filter(lambda n: n.test.code() == '__name__ == "__main__"')
 q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
 ```
 
+### 4. finding
+
+for simplicity there are a couple of `find_*` methods that can be used to find specific structures, that makes things easier. These are
+
+* **find_assignment**: find an assigment   
+
+```dumas[python@fassigment]
+from cstq import Query
+
+config = Query("""
+MAGIC_CONSTANTS = [
+   1, 
+   2, 
+   3, 
+   "foo", 
+   3j
+]
+""")
+
+assignment = config.find_assignment(variable_name="MAGIC_CONSTANTS")
+
+# convert the node into an actuall python object
+assignment.value.literal_eval_for_node()
+```
+
+* **find_function_call**: helps finding a particular funtion call.
+
+```dumas[python@fcall]
+
+from cstq import Query
+
+q = Query("""
+x = [2,1,3]
+sx = sorted(x)
+rx = sorted(x, reverse=True)
+
+""")
+
+q.find_function_call(func_name="sorted").code_for_nodes()
+```
+```dumas[python@fcall]
+import libcst.matchers as m
+
+q.find_function_call(func_name="sorted", has_kwargs={"reverse": m.Name("True")}).code_for_node()
+```
+
 ### using callbacks
 
 `.filter` and `.search` can take a callback method that takes an _extended version_ of a CSTNode and returns true or false.
