@@ -6,6 +6,8 @@ import libcst.matchers as m
 
 import cstq.nodes
 
+from .obj2x import obj2x
+
 MATCH_INPUT = (
     m.BaseMatcherNode
     | Callable[[cst.CSTNode | cstq.nodes.CSTQExtendedNode], bool]
@@ -26,3 +28,6 @@ def build_attribute_matcher(mod):
         return m.Attribute(value=value, attr=m.Name(attr))
 
     return _attribute_matcher(nmod.pop(), nmod)
+
+
+obj2m = obj2x(m)

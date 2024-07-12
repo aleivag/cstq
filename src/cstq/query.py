@@ -10,7 +10,7 @@ import libcst.matchers as m
 
 from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
-from cstq.matchers import matcher
+from cstq.matchers import match, matcher, MATCH_INPUT
 from cstq.matchers_helpers import build_attribute_matcher
 from cstq.node2id import NodeIDProvider
 from cstq.nodes import CSTQExtendedNode, CSTQRange
@@ -67,6 +67,57 @@ class CollectionOfNodes:
             nodes = nodes.search(m.AssignTarget(target=m.Name(variable_name))).parent()
         return nodes
 
+    def find_class_def(
+        self,
+        name: str | None = None,
+        *,
+        has_bases: list[str] | None = None,
+        keyword_has_value: dict[str, MATCH_INPUT] | None = None,
+    ) -> CollectionOfNodes:
+        """
+        Find all class definitions in the collection that match the given criteria. If name is provided and its a string
+        it will filter by that class name. If has_bases is provided, then we will check for those as base classes. Same for 
+        `keyword_has_value` thats a dictionary, where the keys are a string representing the exact keyword, and the value is 
+        a match expression.
+
+        For instance for the class deifition `class Foo(unittest.TestCase, TestMixIn, answer=42): ...` then
+
+           self.find_class_def("Foo")
+           self.find_class_def(has_bases=["unittest.TestCase"])
+           self.find_class_def(has_bases=["TestMixIn"])
+           self.find_class_def(has_bases=["unittest.TestCase", "TestMixIn"])
+           self.find_class_def(has_bases=["TestMixIn"], keyword_has_value={"answer": obj2m(42)})
+
+        they all return the same cclass a collection of nodes, but:
+
+            self.find_class_def("F00")
+            self.find_class_def(has_bases=["NotAClass"])
+            self.find_class_def(has_bases=["unittest.TestCase", "NotAClass"])
+
+        return an empty collection of nodes
+
+        """
+
+        some_classes = self.search(m.ClassDef(name=m.Name(value=name)) if name else m.ClassDef())
+
+        for base in has_bases or []:
+            if isinstance(base, str):
+                some_classes = some_classes.bases.filter(
+                    m.Arg(
+                        value=build_attribute_matcher(base.split(".")),
+                    )
+                ).parent()
+            else:
+                raise NotImplementedError("Havent got arround to implemenat serach by anything else")
+
+        for keyword, value in (keyword_has_value or {}).items():
+            
+            some_classes = some_classes.keywords.filter(
+                m.Arg(keyword=m.Name(value=keyword)),
+                lambda enode: match(enode.value, value, root=self.root),
+            ).parent()
+        return some_classes
+
     # find functions
     def find_function_call(
         self,
@@ -87,7 +138,7 @@ class CollectionOfNodes:
 
         for kw_name, kw_value in has_kwargs.items():
             nodes = nodes.search(
-                m.Arg(keyword=m.Name(value=kw_name)),
+                m.Arg(keyword=m.Name(kw_name)),
                 partial(lambda value, node: node.value.match(value), kw_value),
             ).parent()
 
