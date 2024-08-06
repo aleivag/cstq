@@ -67,3 +67,11 @@ if __name__ == "__main__":
     main()
 """.strip()
     )
+
+
+
+
+def test_empty_body():
+    q = Query("")
+    q.body.insert(0, Query("import foo").body[0])
+    assert q.root.code() == "import foo"

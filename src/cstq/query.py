@@ -23,7 +23,7 @@ class CollectionOfNodes:
 
     @property
     def __nodes(self) -> dict[str, cst.CSTNode]:
-        return {node_id: node for node_id, node in self.root.get_nodes_by_id(self.__node_ids).items() if node}
+        return {node_id: node for node_id, node in self.root.get_nodes_by_id(self.__node_ids).items() if node is not None}
 
     @property
     def _nodes_id(self) -> list[str]:
