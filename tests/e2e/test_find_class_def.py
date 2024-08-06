@@ -48,3 +48,13 @@ def test_find_class_by_keyword():
     q = Query(TEXT)
     assert q.find_class_def(keyword_has_value={"answer": m.Integer("42")}).node().name.value == "Foo"
     assert q.find_class_def(keyword_has_value={"answer": obj2m(42)}).node().name.value == "Foo"
+
+
+def test_replace_class_base():
+    q = Query(TEXT)
+
+    q.find_class_def(has_bases=["TestMixIn"]).bases[:].value[m.Name("TestMixIn")].change(value="AsyncTestMixIn")
+    # q.find_class_def(has_bases=["unittest.TestCase"]).bases[:].value[m.Name("TestMixIn")].change(value="TestMixIn2")
+
+    assert not q.find_class_def(has_bases=["TestMixIn"])  # old class does not exist
+    assert q.find_class_def(has_bases=["AsyncTestMixIn"])  # new class  exists

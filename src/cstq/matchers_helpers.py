@@ -6,7 +6,7 @@ import libcst.matchers as m
 
 import cstq.nodes
 
-from .obj2x import obj2x
+from .obj2x import obj2x, str2xattr
 
 MATCH_INPUT = (
     m.BaseMatcherNode
@@ -31,3 +31,5 @@ def build_attribute_matcher(mod):
 
 
 obj2m = obj2x(m)
+str2mattr = partial(str2xattr, x=m)
+# TODO: replace build_attribute_matcher with str2mattr

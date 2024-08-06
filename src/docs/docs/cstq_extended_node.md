@@ -42,3 +42,29 @@ the_dict
 ```dumas[python]
 the_dict["a int"]
 ```
+
+this is usefull, because you can also get a literal eval for an extended node
+
+```dumas[python]
+node = q.search(m.Dict()).extended_node()
+node.literal_eval()
+```
+
+and it can be use in filters and searches, like in this example
+
+```dumas[python]
+q.search(m.Dict(), lambda node: node.literal_eval()["a int"] == 42)
+```
+
+where we can search for all Dicts, and then liteeral_eval that node and ask for the "a int" element. watchout because not
+all Dict can be literal_eval. literal_eval only works for simple python objects.
+
+# parent
+
+A pretty cool feature of extended nodes, is that they know their parents, so you can easily ask for them.
+
+
+# Specific nodes
+
+ * [ClassDef](extended_nodes/class_def.md)
+

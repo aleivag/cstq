@@ -89,11 +89,20 @@ class CSTQExtendedNode:
         self.collection().replace(new_node)
 
     def change(self, *args, **kwargs) -> CSTQExtendedNode:
+        """
+        modify current node
+        """
         self.collection().change(*args, **kwargs)
         return self
 
     def remove(self) -> None:
+        """
+        Removes this node from the root document
+        """
         self.collection().remove()
 
     def with_changes(self, **changes: Any) -> cst.CSTNode:
+        """
+        produce a similar node with the changes applied
+        """
         return self.node().with_changes(**changes)

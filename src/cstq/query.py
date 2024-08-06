@@ -10,7 +10,7 @@ import libcst.matchers as m
 
 from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
-from cstq.matchers import match, matcher, MATCH_INPUT
+from cstq.matchers import MATCH_INPUT, match, matcher
 from cstq.matchers_helpers import build_attribute_matcher
 from cstq.node2id import NodeIDProvider
 from cstq.nodes import CSTQExtendedNode, CSTQRange
@@ -76,8 +76,8 @@ class CollectionOfNodes:
     ) -> CollectionOfNodes:
         """
         Find all class definitions in the collection that match the given criteria. If name is provided and its a string
-        it will filter by that class name. If has_bases is provided, then we will check for those as base classes. Same for 
-        `keyword_has_value` thats a dictionary, where the keys are a string representing the exact keyword, and the value is 
+        it will filter by that class name. If has_bases is provided, then we will check for those as base classes. Same for
+        `keyword_has_value` thats a dictionary, where the keys are a string representing the exact keyword, and the value is
         a match expression.
 
         For instance for the class deifition `class Foo(unittest.TestCase, TestMixIn, answer=42): ...` then
@@ -111,7 +111,6 @@ class CollectionOfNodes:
                 raise NotImplementedError("Havent got arround to implemenat serach by anything else")
 
         for keyword, value in (keyword_has_value or {}).items():
-            
             some_classes = some_classes.keywords.filter(
                 m.Arg(keyword=m.Name(value=keyword)),
                 lambda enode: match(enode.value, value, root=self.root),

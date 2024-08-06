@@ -5,8 +5,7 @@
 
 * * *
 
-A very simple and, at least according to the author, intuitive library to navigate Python source code, and code modeling
-based on [libcst](https://github.com/Instagram/LibCST).
+A very simple and, at least according to the author, intuitive library to navigate and manipulate Python source code, and code modeling based on [libcst](https://github.com/Instagram/LibCST).
 
 ## Enough said, I need some action!
 
@@ -137,13 +136,14 @@ Out[9]: Name(
 ```
 ### 2. Filtering
 
-Filtering allows you to "filter" the current selection of nodes to specific ones. Each one of these accepts either a
+The first lookup funtion we will learn is "Filtering", this allows you to "filter" the current selection of nodes to specific ones. Each one of these accepts either a
 [`libcst.matchers`](https://libcst.readthedocs.io/en/latest/matchers_tutorial.html) or a callback (more on callbacks later).
 `libcst.matchers` presents a very powerful query language, and when that's not enough, you can always fall back to a custom callback.
 
 ```python
 
-In [10]: import libcst.matchers as m
+In [10]: import libcst as cst
+    ...: import libcst.matchers as m
 ```
 
 ```python
@@ -173,36 +173,92 @@ Out[13]: <CollectionOfNodes nodes=['$(Module).body[1](FunctionDef)']>
 
 By using the `.filter` method, you can filter any selection. For instance, `q.body[:]` represents the elements of the body of
 the module. However, you can also filter out by using the `__getitem__` operation (`[.. add your filter here ...]`),
-making it a bit more compact.
+making it a bit more compact. Filters can also be callables, that takes one argument, the [extended node](docs/cstq_extended_node.md) and return a boolean, so we can write the previous filter as
+
+```python
+# filter out function definitions using implicit filter
+In [14]: q.body[lambda node: isinstance(node, cst.FunctionDef)]
+
+
+Out[14]: <CollectionOfNodes nodes=['$(Module).body[1](FunctionDef)']>
+```
+
+Finally filters can be chained very easily in some ways, the following example first get all the If that are part of the body, the second filter act over the previous selection and only picks the one that match the if **name** == "**main**" pattern.
+
+```python
+
+In [15]: import re
+    ...: 
+    ...: IF_MAIN_REGEX = re.compile(r'^ *__name__ *== *"__main__" *$')
+    ...: 
+    ...: q.body[m.If(), lambda node: IF_MAIN_REGEX.match(node.test.code())].code_for_node()
+
+
+Out[15]: 
+if __name__ == "__main__":
+    main()
+```
+
+keep in mind that libcst matchers will almost always get you 99% on the way of what you want, then you may just need to take it a bit further with a custom function, for instance the previous example could have been solved with
+
+```python
+
+
+In [16]: q.body[
+    ...:     m.If(
+    ...:         test=m.Comparison(
+    ...:             left=m.Name("__name__"),
+    ...:             comparisons=[
+    ...:                 m.ComparisonTarget(
+    ...:                     operator=m.Equal(), comparator=m.SimpleString('"__main__"')
+    ...:                 )
+    ...:             ],
+    ...:         )
+    ...:     )
+    ...: ].code_for_node()
+
+
+Out[16]: 
+if __name__ == "__main__":
+    main()
+```
+
+I dont know that i would call it intoutive, but the matcher took you ther 100%.
 
 ### 3. Searching
 
-If you want to search, not only in the current selection but also at every level, you can use `.search`. Similar
+The second type of lookup we will look its search. Search looks at the entire tree of teh collection, including childrens Similar
 to `.filter`, it accepts a `libcst.matchers` or a callback.
 
 ```python
 
-In [14]: q.search(m.Import())
+In [17]: q.search(m.Import())
 
 
-Out[14]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Import)', '$(Module).body[1](FunctionDef).body(IndentedBlock).body[0](SimpleStatementLine).body[0](Import)']>
+Out[17]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Import)', '$(Module).body[1](FunctionDef).body(IndentedBlock).body[0](SimpleStatementLine).body[0](Import)']>
 ```
 
 ```python
 
-# get the __name__ == "__main__" using search and filter
-In [15]: q.search(m.If()).filter(lambda n: n.test.code() == '__name__ == "__main__"')
+In [18]: def test_for_if_main(node):
+    ...:     return IF_MAIN_REGEX.match(node.test.code())
+    ...: 
+    ...: 
+    ...: # get the __name__ == "__main__" using search and filter
+    ...: q.search(m.If()).filter(test_for_if_main)
 
 
-Out[15]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
+Out[18]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
 ```
 
 ```python
 # combining multiple search and filters into a single statement 
-In [16]: q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
+In [19]: q.search(m.If(), test_for_if_main).code_for_node()
 
 
-Out[16]: <CollectionOfNodes nodes=['$(Module).body[2](If)']>
+Out[19]: 
+if __name__ == "__main__":
+    main()
 ```
 
 ### 4. finding
@@ -290,15 +346,15 @@ for instance removing the first import would be as easy as finding it
 
 ```python
 
-In [17]: q.body[0].body[0].remove()
+In [20]: q.body[0].body[0].remove()
 ```
 
 ```python
 # print the code on top
-In [18]: q.code()
+In [21]: q.code()
 
 
-Out[18]: 
+Out[21]: 
 
 def main() -> None:
     import os
@@ -313,10 +369,10 @@ defined to have 1 empty line as a header, and the funtion def has the leading_li
 
 ```python
 
-In [19]: q.header[:].node()
+In [22]: q.header[:].node()
 
 
-Out[19]: EmptyLine(
+Out[22]: EmptyLine(
     indent=True,
     whitespace=SimpleWhitespace(
         value='',
@@ -330,18 +386,18 @@ Out[19]: EmptyLine(
 
 ```python
 
-In [20]: q.body[0]
+In [23]: q.body[0]
 
 
-Out[20]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
+Out[23]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
 ```python
 
-In [21]: q.body[0].leading_lines[:].node()
+In [24]: q.body[0].leading_lines[:].node()
 
 
-Out[21]: EmptyLine(
+Out[24]: EmptyLine(
     indent=True,
     whitespace=SimpleWhitespace(
         value='',
@@ -357,18 +413,18 @@ Let's address this by simply changing the attribute `leading_lines` in that func
 
 ```python
 
-In [22]: q.body[0].change(leading_lines=[])
+In [25]: q.body[0].change(leading_lines=[])
 
 
-Out[22]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
+Out[25]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
 ```python
 
-In [23]: q.code()
+In [26]: q.code()
 
 
-Out[23]: 
+Out[26]: 
 def main() -> None:
     import os
     print('hello world' if os.environ.get("USER") else "who are you?")
@@ -382,10 +438,10 @@ for more complex changes, instead of passing the attributes to change, you can p
 ```python
 # reverse the order of leading lines
 
-In [24]: q.body[0].change(lambda node: node.with_changes(leading_lines=node.leading_lines[::-1]))
+In [27]: q.body[0].change(lambda node: node.with_changes(leading_lines=node.leading_lines[::-1]))
 
 
-Out[24]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
+Out[27]: <CollectionOfNodes nodes=['$(Module).body[0](FunctionDef)']>
 ```
 
 you can replace a node with another one
@@ -394,13 +450,13 @@ you can replace a node with another one
 # Lets create an "import from" node and using the serach and node function,
 # and then lets use that node to replace the "import" on our module.
 
-In [25]: import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
+In [28]: import_from = Query("from python_wrapper import os").search(m.ImportFrom()).node()
     ...: 
     ...: q.search(m.Import()).replace(import_from)
     ...: q.code()
 
 
-Out[25]: 
+Out[28]: 
 def main() -> None:
     from python_wrapper import os
     print('hello world' if os.environ.get("USER") else "who are you?")
@@ -414,21 +470,21 @@ To add a import at the top of the file, we can `.insert` the new node at the top
 ```python
 # Let's add the import at the top level
 
-In [26]: import libcst as cst
+In [29]: import libcst as cst
     ...: 
     ...: q.body.insert(0, cst.SimpleStatementLine(body=[import_from]))
 ```
 
 ```python
 # Let's remove the inner import
-In [27]: q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
+In [30]: q.search(m.FunctionDef()).search(m.ImportFrom()).remove()
 ```
 ```python
 # Let's print the result
-In [28]: q.code()
+In [31]: q.code()
 
 
-Out[28]: 
+Out[31]: 
 from python_wrapper import os
 def main() -> None:
     print('hello world' if os.environ.get("USER") else "who are you?")
@@ -443,7 +499,7 @@ adding a call at the end would be as easy as
 # using extend to add a few lines at the end of the document
 
 
-In [29]: EXTRA_LINES = Query(
+In [32]: EXTRA_LINES = Query(
     ...:     """
     ...: import my_custom_logging
     ...: my_custom_logging.log(__file__)
@@ -455,7 +511,7 @@ In [29]: EXTRA_LINES = Query(
     ...: q.code()
 
 
-Out[29]: 
+Out[32]: 
 from python_wrapper import os
 def main() -> None:
     print('hello world' if os.environ.get("USER") else "who are you?")
@@ -475,7 +531,7 @@ CST representation this is not extremely hard to do
 
 ```python
 
-In [30]: from cstq import Query, obj2cst
+In [33]: from cstq import Query, obj2cst
     ...: import libcst.matchers as m
     ...: 
     ...: q = Query(
@@ -488,31 +544,31 @@ In [30]: from cstq import Query, obj2cst
     ...: the_list
 
 
-Out[30]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Assign).value(List)']>
+Out[33]: <CollectionOfNodes nodes=['$(Module).body[0](SimpleStatementLine).body[0](Assign).value(List)']>
 ```
 
 ```python
 # now we can turn that cst.List object into a python list using using `literal_eval_for_node`
 
-In [31]: real_list = the_list.literal_eval_for_node()
+In [34]: real_list = the_list.literal_eval_for_node()
     ...: f"type({real_list}) = {type(real_list)} "
 
 
-Out[31]: type([1, 2, 3, 'foo', 3j]) = <class 'list'> 
+Out[34]: type([1, 2, 3, 'foo', 3j]) = <class 'list'> 
 ```
 
 ```python
 # lets remove non integers for it and lets write it back to the cst
 
 
-In [32]: only_int_list = obj2cst([e for e in real_list if isinstance(e, int)])
+In [35]: only_int_list = obj2cst([e for e in real_list if isinstance(e, int)])
     ...: 
     ...: the_list.replace(only_int_list)
     ...: 
     ...: q.code()
 
 
-Out[32]: 
+Out[35]: 
 X = [1, 2, 3]
 ```
 

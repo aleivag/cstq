@@ -40,7 +40,7 @@ dependencies = [
   "pytest",
   "ipython",
   "jupyter",
-  "dumas>=0.0.4",
+  "dumas>=0.0.6",
   "later"
 ]
 

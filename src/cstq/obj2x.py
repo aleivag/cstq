@@ -55,3 +55,20 @@ def obj2x(cst):
         return cst.Name(value=str(obj))
 
     return obj2cst
+
+
+def str2xattr(mod: str, x):
+    """
+    given a attribute string (e.g. foo.bar.baz), turn this intro an attribute, for x, where x can be cst or matcher node
+    """
+    nmod = mod.split(".")
+
+    def _attribute_matcher(attr, mod):
+        if not mod:
+            return x.Name(attr)
+        else:
+            value = _attribute_matcher(mod.pop(), mod)
+
+        return x.Attribute(value=value, attr=x.Name(attr))
+
+    return _attribute_matcher(nmod.pop(), nmod)

@@ -5,8 +5,7 @@
 
 -----
 
-A very simple and, at least according to the author, intuitive library to navigate Python source code, and code modeling 
-based on [libcst](https://github.com/Instagram/LibCST).
+A very simple and, at least according to the author, intuitive library to navigate and manipulate Python source code, and code modeling based on [libcst](https://github.com/Instagram/LibCST).
 
 ## Enough said, I need some action!
 
@@ -89,12 +88,13 @@ q.body[0].body[:].names[0].name.node()
 ```
 ### 2. Filtering
 
-Filtering allows you to "filter" the current selection of nodes to specific ones. Each one of these accepts either a 
+The first lookup funtion we will learn is "Filtering", this allows you to "filter" the current selection of nodes to specific ones. Each one of these accepts either a 
 [`libcst.matchers`](https://libcst.readthedocs.io/en/latest/matchers_tutorial.html) or a callback (more on callbacks later). 
 `libcst.matchers` presents a very powerful query language, and when that's not enough, you can always fall back to a custom callback.
 
 
 ```dumas[python]
+import libcst as cst
 import libcst.matchers as m
 
 ```
@@ -117,11 +117,50 @@ q.body[m.FunctionDef()]
 
 By using the `.filter` method, you can filter any selection. For instance, `q.body[:]` represents the elements of the body of 
 the module. However, you can also filter out by using the `__getitem__` operation (`[.. add your filter here ...]`), 
-making it a bit more compact.
+making it a bit more compact. Filters can also be callables, that takes one argument, the [extended node](docs/cstq_extended_node.md) and return a boolean, so we can write the previous filter as
+
+
+```dumas[python]
+# filter out function definitions using implicit filter
+q.body[lambda node: isinstance(node, cst.FunctionDef)]
+```
+
+
+Finally filters can be chained very easily in some ways, the following example first get all the If that are part of the body, the second filter act over the previous selection and only picks the one that match the if __name__ == "__main__" pattern.
+
+```dumas[python]
+import re
+IF_MAIN_REGEX = re.compile(r'^ *__name__ *== *"__main__" *$')
+
+q.body[m.If(), lambda node: IF_MAIN_REGEX.match(node.test.code())].code_for_node()
+
+```
+
+keep in mind that libcst matchers will almost always get you 99% on the way of what you want, then you may just need to take it a bit further with a custom function, for instance the previous example could have been solved with
+
+```dumas[python]
+
+q.body[
+    m.If(
+        test=m.Comparison(
+            left=m.Name("__name__"),
+            comparisons=[
+                m.ComparisonTarget(
+                    operator=m.Equal(),
+                    comparator=m.SimpleString('"__main__"')
+                )
+            ]
+        )
+    )
+].code_for_node()
+
+```
+
+I dont know that i would call it intoutive, but the matcher took you ther 100%.
 
 ### 3. Searching
 
-If you want to search, not only in the current selection but also at every level, you can use `.search`. Similar 
+The second type of lookup we will look its search. Search looks at the entire tree of teh collection, including childrens Similar 
 to `.filter`, it accepts a `libcst.matchers` or a callback.
 
 ```dumas[python]
@@ -130,13 +169,17 @@ q.search(m.Import())
 
 ```dumas[python]
 
+def test_for_if_main(node):
+    return IF_MAIN_REGEX.match(node.test.code())
+
+
 # get the __name__ == "__main__" using search and filter
-q.search(m.If()).filter(lambda n: n.test.code() == '__name__ == "__main__"')
+q.search(m.If()).filter(test_for_if_main)
 ```
 
 ```dumas[python]
 # combining multiple search and filters into a single statement 
-q.search(m.If(), lambda n: n.test.code() == '__name__ == "__main__"')
+q.search(m.If(), test_for_if_main).code_for_node()
 ```
 
 ### 4. finding
