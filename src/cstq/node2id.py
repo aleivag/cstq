@@ -34,6 +34,9 @@ def _(node, id_prefix: str, parent: cst.CSTNode, attribute: str) -> Generator[Tu
     yield node, id_prefix
 
     for attr in node.__dataclass_fields__:
+        if attr in ("__slots__",):
+            # this is not a real field of a cstnode, its more of a dataclass thingi, ignore it
+            continue
         yield from [
             inner
             for inner in node2id(

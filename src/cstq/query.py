@@ -143,7 +143,10 @@ class CollectionOfNodes:
 
         return nodes
 
-    def find_import_from(self, module: list[str], name: None | str = None):
+    def find_import_from(self, module: list[str] | str, name: None | str = None):
+        if isinstance(module, str):
+            module = module.split(".")
+        
         module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
             build_attribute_matcher(module) if module else m.DoNotCare()
         )
@@ -153,6 +156,8 @@ class CollectionOfNodes:
         return self.search(matcher)
 
     def find_import_alias(self, module: list[str]):
+        if isinstance(module, str):
+            module = module.split(".")
         module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
             build_attribute_matcher(module) if module else m.DoNotCare()
         )
@@ -251,6 +256,58 @@ class CollectionOfNodes:
                 mode=InsertMode.insert,
             )
         self.root.transform(transformer)
+    
+    def insert_before(self, object: cst.CSTNode | CSTQExtendedNode | CollectionOfNodes) -> None:
+        # get position of obj
+        if isinstance(object, CollectionOfNodes):
+            return self.insert_before(object=object.node())
+        
+        transformer = InserterNodeTransformer()
+        for node_id in self.__node_ids:
+            node = self.root.get_node_by_id(node_id)
+            range_parent_id = self.root.get_range_parent_id_by_id(node_id)
+            range_parent_node = self.root.get_node_by_id(range_parent_id)
+
+            parent_id = self.root.get_node_id(range_parent_node.parent)
+            
+            index = range_parent_node.elems.index(node)
+            
+            transformer.add_inserter(
+                node_id=parent_id,
+                attribute=range_parent_node.attribute,
+                index=index,
+                node=object,
+                mode=InsertMode.insert,
+            )
+        
+        self.root.transform(transformer)
+
+
+    
+    def insert_after(self, object: cst.CSTNode | CSTQExtendedNode | CollectionOfNodes) -> None:
+        # get position of obj
+        if isinstance(object, CollectionOfNodes):
+            return self.insert_before(object=object.node())
+        
+        transformer = InserterNodeTransformer()
+        for node_id in self.__node_ids:
+            node = self.root.get_node_by_id(node_id)
+            range_parent_id = self.root.get_range_parent_id_by_id(node_id)
+            range_parent_node = self.root.get_node_by_id(range_parent_id)
+
+            parent_id = self.root.get_node_id(range_parent_node.parent)
+            
+            index = range_parent_node.elems.index(node)
+            
+            transformer.add_inserter(
+                node_id=parent_id,
+                attribute=range_parent_node.attribute,
+                index=index + 1,
+                node=object,
+                mode=InsertMode.insert,
+            )
+        
+        self.root.transform(transformer)
 
     def append(self, object: cst.CSTNode | CSTQExtendedNode) -> None:
         if isinstance(object, CollectionOfNodes):
@@ -317,6 +374,7 @@ class CollectionOfNodes:
             [self.root.get_parent_of_node(node) for node in self.__nodes.values()]
         ).values()
         return CollectionOfNodes(list(node_ids), self.root)
+    
 
     def search_for_parents(self, test) -> CollectionOfNodes:
         result = []
@@ -347,9 +405,16 @@ class Query(CollectionOfNodes):
         self.wrapper: cst.metadata.MetadataWrapper = cst.metadata.MetadataWrapper(parsed_mod)
         self.module: cst.Module = self.wrapper.module
 
-        self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
-        self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
+        self.__node_to_id: Mapping[cst.CSTNode, str] =  self.wrapper.resolve(NodeIDProvider)
+        self.__id_to_node: dict[str, cst.CSTNode] =  {v: k for k, v in self.__node_to_id.items()}
         self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = {}
+
+        self.__parent_range = {
+            self.__node_to_id[node]: range_id
+            for range_node, range_id in self.__node_to_id.items()
+            if isinstance(range_node, CSTQRange)
+            for node in range_node.elems
+        }
 
         CollectionOfNodes.__init__(self, [self.get_node_id(self.module)], self)
 
@@ -381,6 +446,31 @@ class Query(CollectionOfNodes):
 
     def get_parent_of_node(self, node: cst.CSTNode) -> cst.CSTNode:
         return self.wrapper.resolve(cst.metadata.ParentNodeProvider)[node]
+
+    def get_range_parent_id_by_id(self, node_id: str) -> cst.CSTNode:
+        """
+        This method return the node id of the CSTRange that contains the node, for instance while for the code
+
+            def func(arg1, arg2): ...
+        
+        the cst node is something like
+
+            FunctionDef(
+                name=Name(value='func'),
+                params=Parameters(
+                    params=(
+                        Param(Name(value='arg1')),
+                        Param(Name(value='arg2')),
+                    )
+                )    
+                ...
+            ),
+        
+        the parent of `Param(Name(value='arg1'))` is `Parameters`, the range parent id `Parameters.params`
+        """
+
+        return  self.__parent_range[node_id]
+    
 
     def code(self) -> str:
         return self.module.code
