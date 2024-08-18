@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from functools import partial, singledispatch
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast
+from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast, TypeVar
 
 import libcst as cst
 import libcst.matchers as m
@@ -14,6 +14,8 @@ from cstq.matchers import MATCH_INPUT, match, matcher
 from cstq.matchers_helpers import build_attribute_matcher
 from cstq.node2id import NodeIDProvider
 from cstq.nodes import CSTQExtendedNode, CSTQRange
+
+T_ = TypeVar("T")
 
 
 class CollectionOfNodes:
@@ -31,6 +33,23 @@ class CollectionOfNodes:
 
     def slice(self, start=None, end=None, step=None):  # noqa: A003
         return CollectionOfNodes(self.__node_ids[slice(start, end, step)], root=self.root)
+
+    def map(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], T_]) -> list[T_]:
+        """
+        Call fnc with every element in the collection of nodes, and returnd a list with each result,
+        If you want it to return the original collection of nodes to keep chaining results, call `apply` 
+        """
+        return [
+            fnc(node)
+            for node in self.extended_nodes()
+        ]
+    
+    def apply(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], Any]) -> "CollectionOfNodes":
+        """
+        calls fnc with every node in the collection, and returns the collection
+        """
+        self.map(fnc)
+        return self
 
     def filter(  # noqa: A003
         self,
@@ -127,7 +146,7 @@ class CollectionOfNodes:
     ) -> CollectionOfNodes:
         # has_args = has_args or []
         has_kwargs = has_kwargs or {}
-        nodes = self.search(m.Call(func=m.Name(value=func_name) if func_name else m.DoNotCare()))
+        nodes = self.search(m.Call(func=build_attribute_matcher(func_name.split(".")) if func_name else m.DoNotCare()))
 
         for arg in has_args or []:
             nodes = nodes.search(

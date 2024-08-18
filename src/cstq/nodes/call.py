@@ -2,6 +2,7 @@ from collections.abc import MutableMapping, MutableSequence
 
 import libcst as cst
 
+
 from cstq.nodes.extended import CSTQExtendedNode
 
 
@@ -77,6 +78,11 @@ class Call(cst.Call):
     """
     Wrapper around cst.Call that helps the retrieval of kwargs and pos args
     """
+
+    @property
+    def func_name(self):
+        return self.func.code()
+
 
     @property
     def positional_args(self):

@@ -56,7 +56,7 @@ but most of the time you actually care about "the name", so you can just get the
 In [4]: node.str_bases
 
 
-Out[4]: <cstq.nodes.class_def.Bases object at 0x1108067e0>
+Out[4]: <cstq.nodes.class_def.Bases object at 0x106905160>
 ```
 
 this method is nice, because lets assume that you wannt to change the base
