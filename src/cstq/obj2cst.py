@@ -25,5 +25,5 @@ def _(node: libcst.Expr):
     return str2node(node.value)
 
 @str2node.register(libcst.CSTNode)
-def _(node: libcst.CSTNode):
+def _(node: libcst.CSTNode): 
     return node
