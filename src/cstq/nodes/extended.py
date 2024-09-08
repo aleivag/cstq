@@ -7,6 +7,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 import libcst as cst
 
+from cstq.nodes.call import CSTQCall
+from cstq.nodes.class_def import CSTQClassDef
+from cstq.nodes.range import CSTQRange
+from cstq.nodes.sequence import CSTQList, CSTQTuple
+
 if TYPE_CHECKING:
     import cstq
 
@@ -16,7 +21,7 @@ class CSTQExtendedNode:
     root: cstq.query.Query
     node_id: str
 
-    __registered_class = {}
+    __registered_class = {cst.Call: CSTQCall, cst.ClassDef: CSTQClassDef, cst.List: CSTQList, cst.Tuple: CSTQTuple}
 
     def node(self) -> cst.CSTNode:
         return self.root.get_node_by_id(self.node_id)

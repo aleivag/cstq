@@ -1,6 +1,7 @@
-from cstq import Query, obj2cst
-import pytest
 import libcst.matchers as m
+import pytest
+
+from cstq import Query, obj2cst
 
 
 def test_get():
@@ -30,7 +31,6 @@ def test_pop():
         l.pop().literal_eval()
 
 
-
 def test_remove():
     q = Query("[1, 2, 3, 4]")
     l = q.search(m.List()).extended_node()
@@ -50,5 +50,3 @@ def test_iter():
     q = Query("[1, 2, 3, 4]")
     l = q.search(m.List()).extended_node()
     assert [e.literal_eval() for e in l] == [1, 2, 3, 4]
-
-

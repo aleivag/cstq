@@ -1,5 +1,6 @@
-import cstq
 import libcst.matchers as m
+
+import cstq
 
 
 def test_find_function(simple_bzl_query):
@@ -41,9 +42,11 @@ def test_find_function_with_filters(simple_bzl_query):
 
 
 def test_find_class_function_call():
-    q = cstq.Query("""
+    q = cstq.Query(
+        """
 class Foo(TestCase):
     def test_mytest(self):
         self.assertTrue(foo)
-""")
+"""
+    )
     assert q.find_function_call("self.assertTrue").code_for_node() == "self.assertTrue(foo)"

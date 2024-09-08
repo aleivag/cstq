@@ -1,7 +1,9 @@
 from textwrap import dedent
 
-from cstq import Query
 import libcst.matchers as m
+
+from cstq import Query
+
 
 def test_str_bases_are_returned():
     class_enode = Query("class Foo(unittest.TestCase, TestMixIn): ...").find_class_def("Foo").extended_node()
@@ -43,12 +45,14 @@ def test_str_bases_add_from_none():
     class_enode.str_bases.append("Bar")
     assert q.code() == "class Foo(Bar): ..."
 
+
 def test_str_bases_can_be_assigned_empty_list():
     q = Query("class Foo(unittest.TestCase, TestMixIn): ...")
     class_enode = q.find_class_def("Foo").extended_node()
     # assert not class_enode
     class_enode.str_bases = []
     assert q.code() == "class Foo(): ..."
+
 
 def test_str_bases_can_be_asigned_partial_list():
     q = Query("class Foo: ...")
@@ -72,7 +76,6 @@ def test_str_bases_can_be_deleted_kepp_par_with_keywords():
     # assert not class_enode
     del class_enode.str_bases
     assert q.code() == "class Foo(answer=42): ..."
-
 
 
 ### testing changing the import name of a method
@@ -101,7 +104,7 @@ def test_change_test_case_to_isolated_asyncio_testcase():
         )
 
     if imp := q.find_import_from(["unittest"]):
-        imp.search(m.Name(value="TestCase")).change(value="IsolatedAsyncioTestCase") # this should be easier
+        imp.search(m.Name(value="TestCase")).change(value="IsolatedAsyncioTestCase")  # this should be easier
 
         # we should change the imp to a much simpler one
         q.find_class_def(has_bases=["TestCase"]).change(

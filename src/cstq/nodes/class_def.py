@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 from collections.abc import MutableMapping, MutableSequence
+from typing import TYPE_CHECKING
 
 import libcst as cst
 
-from cstq.nodes.extended import CSTQExtendedNode
 from cstq.obj2cst import str2attr
+
+if TYPE_CHECKING:
+    from cstq.nodes.extended import CSTQExtendedNode
 
 
 class Bases(MutableSequence):
@@ -34,7 +39,6 @@ class Bases(MutableSequence):
         self[idx] = final
 
 
-@CSTQExtendedNode.register_type
 class CSTQClassDef(cst.ClassDef):
     """
     Wrapper around cst.ClassDef that helps the retrieval of kwargs and pos args
@@ -47,23 +51,22 @@ class CSTQClassDef(cst.ClassDef):
     @str_bases.setter
     def str_bases(self, values: list[str]) -> None:
         self.change(bases=[cst.Arg(value=str2attr(value)) for value in values])
-    
+
     @str_bases.deleter
     def str_bases(self) -> None:
         self.change(bases=[], lpar=cst.MaybeSentinel.DEFAULT, rpar=cst.MaybeSentinel.DEFAULT)
 
-    def __setattr__(self, attr:str, val) -> None:
+    def __setattr__(self, attr: str, val) -> None:
         if attr == "str_bases":
             CSTQClassDef.str_bases.fset(self, val)
         else:
             super().__setattr__(attr, val)
-    
-    def __delattr__(self, attr:str) -> None:
+
+    def __delattr__(self, attr: str) -> None:
         if attr == "str_bases":
             CSTQClassDef.str_bases.fdel(self)
         else:
             super().__delattr__(attr)
-
 
     def replace_base(self, original: str, final: str):
         self.str_bases.replace_base(original, final)

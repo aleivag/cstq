@@ -4,18 +4,13 @@ from typing import Callable
 import libcst as cst
 import libcst.matchers as m
 
-import cstq.nodes
+from cstq.nodes.extended import CSTQExtendedNode
 
-MATCH_INPUT = (
-    m.BaseMatcherNode
-    | Callable[[cst.CSTNode | cstq.nodes.CSTQExtendedNode], bool]
-    | cst.CSTNode
-    | cstq.nodes.CSTQExtendedNode
-)
+MATCH_INPUT = m.BaseMatcherNode | Callable[[cst.CSTNode | CSTQExtendedNode], bool] | cst.CSTNode | CSTQExtendedNode
 
 
 def match(
-    node: cst.CSTNode | cstq.nodes.CSTQExtendedNode,
+    node: cst.CSTNode | CSTQExtendedNode,
     test: MATCH_INPUT | list[MATCH_INPUT] | tuple[MATCH_INPUT, ...],
     root: "cstq.query.Query",
 ) -> bool:
@@ -25,7 +20,7 @@ def match(
     if isinstance(test, (list, tuple)):
         return all(match(node, t, root) for t in test)
 
-    if not isinstance(node, cstq.nodes.CSTQExtendedNode):
+    if not isinstance(node, CSTQExtendedNode):
         node = root.get_extended_node(node)
 
     if callable(test):

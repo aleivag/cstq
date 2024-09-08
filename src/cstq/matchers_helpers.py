@@ -4,16 +4,11 @@ from typing import Callable
 import libcst as cst
 import libcst.matchers as m
 
-import cstq.nodes
+from cstq.nodes.extended import CSTQExtendedNode
 
 from .obj2x import obj2x, str2xattr
 
-MATCH_INPUT = (
-    m.BaseMatcherNode
-    | Callable[[cst.CSTNode | cstq.nodes.CSTQExtendedNode], bool]
-    | cst.CSTNode
-    | cstq.nodes.CSTQExtendedNode
-)
+MATCH_INPUT = m.BaseMatcherNode | Callable[[cst.CSTNode | CSTQExtendedNode], bool] | cst.CSTNode | CSTQExtendedNode
 
 
 def build_attribute_matcher(mod):

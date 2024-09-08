@@ -3,8 +3,6 @@ from collections.abc import MutableSequence
 import libcst as cst
 
 
-from cstq.nodes.extended import CSTQExtendedNode
-
 class Container(MutableSequence):
     def __getitem__(self, item):
         return self.elements[item].value
@@ -18,9 +16,11 @@ class Container(MutableSequence):
 
     def __len__(self):
         return len(self.elements)
-    
-    def pop(self, _ = -1):
-        raise RuntimeError("Cannot pop element from List node. Once an element is removed from the list, it no longer belongs to the document and any operations performed on it would be lost.")
+
+    def pop(self, _=-1):
+        raise RuntimeError(
+            "Cannot pop element from List node. Once an element is removed from the list, it no longer belongs to the document and any operations performed on it would be lost."
+        )
 
     def remove_at(self, idx):
         del self[idx]
@@ -33,16 +33,13 @@ class Container(MutableSequence):
         self.change(elements=seq)
 
 
-
-@CSTQExtendedNode.register_type
-class CSTList(cst.List,Container):
+class CSTQList(cst.List, Container):
     """
-    Wrapper around cst.List that implements a few Sequence methods 
+    Wrapper around cst.List that implements a few Sequence methods
     """
 
 
-@CSTQExtendedNode.register_type
-class CSTTuple(cst.Tuple, Container):
+class CSTQTuple(cst.Tuple, Container):
     """
-    Wrapper around cst.Tuple that implements a few Sequence methods 
+    Wrapper around cst.Tuple that implements a few Sequence methods
     """
