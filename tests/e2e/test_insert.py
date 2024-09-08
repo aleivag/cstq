@@ -69,8 +69,6 @@ if __name__ == "__main__":
     )
 
 
-
-
 def test_empty_body():
     q = Query("")
     q.body.insert(0, Query("import foo").body[0])

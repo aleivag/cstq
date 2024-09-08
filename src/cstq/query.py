@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from functools import partial, singledispatch
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, cast, TypeVar
+from typing import Any, Callable, Iterable, Mapping, NoReturn, Sequence, TypeVar, cast
 
 import libcst as cst
 import libcst.matchers as m
@@ -13,7 +13,8 @@ from cstq.cstvisitors import Extractor
 from cstq.matchers import MATCH_INPUT, match, matcher
 from cstq.matchers_helpers import build_attribute_matcher
 from cstq.node2id import NodeIDProvider
-from cstq.nodes import CSTQExtendedNode, CSTQRange
+from cstq.nodes.extended import CSTQExtendedNode
+from cstq.nodes.range import CSTQRange
 
 T_ = TypeVar("T")
 
@@ -25,7 +26,9 @@ class CollectionOfNodes:
 
     @property
     def __nodes(self) -> dict[str, cst.CSTNode]:
-        return {node_id: node for node_id, node in self.root.get_nodes_by_id(self.__node_ids).items() if node is not None}
+        return {
+            node_id: node for node_id, node in self.root.get_nodes_by_id(self.__node_ids).items() if node is not None
+        }
 
     @property
     def _nodes_id(self) -> list[str]:
@@ -37,14 +40,11 @@ class CollectionOfNodes:
     def map(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], T_]) -> list[T_]:
         """
         Call fnc with every element in the collection of nodes, and returnd a list with each result,
-        If you want it to return the original collection of nodes to keep chaining results, call `apply` 
+        If you want it to return the original collection of nodes to keep chaining results, call `apply`
         """
-        return [
-            fnc(node)
-            for node in self.extended_nodes()
-        ]
-    
-    def apply(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], Any]) -> "CollectionOfNodes":
+        return [fnc(node) for node in self.extended_nodes()]
+
+    def apply(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], Any]) -> CollectionOfNodes:
         """
         calls fnc with every node in the collection, and returns the collection
         """
@@ -165,7 +165,7 @@ class CollectionOfNodes:
     def find_import_from(self, module: list[str] | str, name: None | str = None):
         if isinstance(module, str):
             module = module.split(".")
-        
+
         module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
             build_attribute_matcher(module) if module else m.DoNotCare()
         )
@@ -275,12 +275,12 @@ class CollectionOfNodes:
                 mode=InsertMode.insert,
             )
         self.root.transform(transformer)
-    
+
     def insert_before(self, object: cst.CSTNode | CSTQExtendedNode | CollectionOfNodes) -> None:
         # get position of obj
         if isinstance(object, CollectionOfNodes):
             return self.insert_before(object=object.node())
-        
+
         transformer = InserterNodeTransformer()
         for node_id in self.__node_ids:
             node = self.root.get_node_by_id(node_id)
@@ -288,9 +288,9 @@ class CollectionOfNodes:
             range_parent_node = self.root.get_node_by_id(range_parent_id)
 
             parent_id = self.root.get_node_id(range_parent_node.parent)
-            
+
             index = range_parent_node.elems.index(node)
-            
+
             transformer.add_inserter(
                 node_id=parent_id,
                 attribute=range_parent_node.attribute,
@@ -298,16 +298,14 @@ class CollectionOfNodes:
                 node=object,
                 mode=InsertMode.insert,
             )
-        
+
         self.root.transform(transformer)
 
-
-    
     def insert_after(self, object: cst.CSTNode | CSTQExtendedNode | CollectionOfNodes) -> None:
         # get position of obj
         if isinstance(object, CollectionOfNodes):
             return self.insert_before(object=object.node())
-        
+
         transformer = InserterNodeTransformer()
         for node_id in self.__node_ids:
             node = self.root.get_node_by_id(node_id)
@@ -315,9 +313,9 @@ class CollectionOfNodes:
             range_parent_node = self.root.get_node_by_id(range_parent_id)
 
             parent_id = self.root.get_node_id(range_parent_node.parent)
-            
+
             index = range_parent_node.elems.index(node)
-            
+
             transformer.add_inserter(
                 node_id=parent_id,
                 attribute=range_parent_node.attribute,
@@ -325,7 +323,7 @@ class CollectionOfNodes:
                 node=object,
                 mode=InsertMode.insert,
             )
-        
+
         self.root.transform(transformer)
 
     def append(self, object: cst.CSTNode | CSTQExtendedNode) -> None:
@@ -393,7 +391,6 @@ class CollectionOfNodes:
             [self.root.get_parent_of_node(node) for node in self.__nodes.values()]
         ).values()
         return CollectionOfNodes(list(node_ids), self.root)
-    
 
     def search_for_parents(self, test) -> CollectionOfNodes:
         result = []
@@ -424,8 +421,8 @@ class Query(CollectionOfNodes):
         self.wrapper: cst.metadata.MetadataWrapper = cst.metadata.MetadataWrapper(parsed_mod)
         self.module: cst.Module = self.wrapper.module
 
-        self.__node_to_id: Mapping[cst.CSTNode, str] =  self.wrapper.resolve(NodeIDProvider)
-        self.__id_to_node: dict[str, cst.CSTNode] =  {v: k for k, v in self.__node_to_id.items()}
+        self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
+        self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
         self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = {}
 
         self.__parent_range = {
@@ -471,7 +468,7 @@ class Query(CollectionOfNodes):
         This method return the node id of the CSTRange that contains the node, for instance while for the code
 
             def func(arg1, arg2): ...
-        
+
         the cst node is something like
 
             FunctionDef(
@@ -481,15 +478,14 @@ class Query(CollectionOfNodes):
                         Param(Name(value='arg1')),
                         Param(Name(value='arg2')),
                     )
-                )    
+                )
                 ...
             ),
-        
+
         the parent of `Param(Name(value='arg1'))` is `Parameters`, the range parent id `Parameters.params`
         """
 
-        return  self.__parent_range[node_id]
-    
+        return self.__parent_range[node_id]
 
     def code(self) -> str:
         return self.module.code

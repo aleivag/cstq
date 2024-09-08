@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from collections.abc import MutableMapping, MutableSequence
+from typing import TYPE_CHECKING
 
 import libcst as cst
 
-
-from cstq.nodes.extended import CSTQExtendedNode
+if TYPE_CHECKING:
+    from cstq.nodes.extended import CSTQExtendedNode
 
 
 class Positional(MutableSequence):
@@ -73,8 +76,7 @@ class Keywords(MutableMapping):
         return {k: v.value for k, v in self.__dict.items()}.__iter__()
 
 
-@CSTQExtendedNode.register_type
-class Call(cst.Call):
+class CSTQCall(cst.Call):
     """
     Wrapper around cst.Call that helps the retrieval of kwargs and pos args
     """
@@ -82,7 +84,6 @@ class Call(cst.Call):
     @property
     def func_name(self):
         return self.func.code()
-
 
     @property
     def positional_args(self):

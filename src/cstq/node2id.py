@@ -3,7 +3,7 @@ from typing import Generator, Tuple
 
 import libcst as cst
 
-from cstq.nodes import CSTQRange
+from cstq.nodes.range import CSTQRange
 
 
 class NodeIDProvider(cst.VisitorMetadataProvider[str]):
