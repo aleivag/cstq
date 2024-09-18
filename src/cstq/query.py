@@ -12,7 +12,7 @@ from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeT
 from cstq.cstvisitors import Extractor
 from cstq.matchers import MATCH_INPUT, match, matcher
 from cstq.matchers_helpers import build_attribute_matcher
-from cstq.node2id import NodeIDProvider
+from cstq.node2id import node2id
 from cstq.nodes.extended import CSTQExtendedNode
 from cstq.nodes.range import CSTQRange
 
@@ -219,7 +219,7 @@ class CollectionOfNodes:
             if isinstance(attr, cst.CSTNode):
                 results.append(self.root.get_node_id(attr))
             elif isinstance(attr, (list, tuple)):
-                results.append(f"{_node_id}.{item}")
+                results.append(_node_id.attribute(item))
 
         return CollectionOfNodes(
             results,
@@ -421,7 +421,7 @@ class Query(CollectionOfNodes):
         self.wrapper: cst.metadata.MetadataWrapper = cst.metadata.MetadataWrapper(parsed_mod)
         self.module: cst.Module = self.wrapper.module
 
-        self.__node_to_id: Mapping[cst.CSTNode, str] = self.wrapper.resolve(NodeIDProvider)
+        self.__node_to_id: Mapping[cst.CSTNode, str] =  {node: id_ for node, id_ in node2id(self.module)}
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
         self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = {}
 
