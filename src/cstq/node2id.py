@@ -1,24 +1,25 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
 from functools import singledispatch
+from itertools import zip_longest
 from typing import Generator, Tuple
 
 import libcst as cst
 
 from cstq.nodes.range import CSTQRange
-from dataclasses import dataclass
-from itertools import zip_longest
 
 
 @dataclass(frozen=True, slots=True, repr=False, eq=True)
 class PathID:
-    parent:None = None
+    parent: None = None
 
     def __str__(self):
         return self.id()
-    
+
     def __repr__(self):
         return self.id()
-    
+
     def cmp_val(self, value):
         if self == value:
             return 0
@@ -31,22 +32,21 @@ class PathID:
                 return -1
             if b is None:
                 return 1
-            
+
             if type(a) != type(b):
                 raise RuntimeError(f"{a.id()} != {b.id()}")
-            
+
             ncmp = a.cmp_val(b)
             if ncmp != 0:
                 return ncmp
         return ncmp
-            
 
     def __lt__(self, value: object) -> bool:
         return self.cmp(value) < 0
 
     def __le__(self, value: object) -> bool:
         return self.cmp(value) <= 0
-    
+
     def __gt__(self, value: object) -> bool:
         return self.cmp(value) > 0
 
@@ -58,10 +58,10 @@ class PathID:
 
     def item(self, key: object) -> ItemID:
         return ItemID(parent=self, key=key)
-    
+
     def solve(self, obj):
         return obj
-    
+
     def resolve(self, obj):
         imp = obj
         for path in reversed([*self.parents]):
@@ -70,13 +70,13 @@ class PathID:
 
     def id(self):
         return "$"
-    
+
     @property
-    def parents(self) -> Generator["PathID", None, None]:
+    def parents(self) -> Generator[PathID, None, None]:
         if self.parent:
             yield self.parent
             yield from self.parent.parents
-    
+
 
 @dataclass(frozen=True, slots=True, repr=False)
 class AttributeID(PathID):
@@ -85,10 +85,10 @@ class AttributeID(PathID):
 
     def solve(self, obj):
         return getattr(obj, self.attr)
-    
+
     def id(self):
-        return f'{self.parent.id()}.{self.attr}'
-    
+        return f"{self.parent.id()}.{self.attr}"
+
     def cmp_val(self, value):
         if self.attr < value.attr:
             return -1
@@ -107,8 +107,8 @@ class ItemID(PathID):
         return obj[self.key]
 
     def id(self):
-        return f'{self.parent.id()}[{self.key}]'
-    
+        return f"{self.parent.id()}[{self.key}]"
+
     def cmp_val(self, value):
         if self.key < value.key:
             return -1
@@ -125,9 +125,7 @@ class NodeIDProvider(cst.VisitorMetadataProvider[str]):
 
 
 @singledispatch
-def __node2id(
-    node, objid: PathID, parent_node=None, attribute=None
-) -> Generator[Tuple[cst.CSTNode, str], None, None]:
+def __node2id(node, objid: PathID, parent_node=None, attribute=None) -> Generator[Tuple[cst.CSTNode, str], None, None]:
     yield from []
 
 
@@ -154,7 +152,7 @@ def _(node, objid: PathID, parent_node=None, attribute=None) -> Generator[Tuple[
             for inner in __node2id(
                 getattr(node, attr),
                 objid.attribute(attr),
-                parent_node=node, 
+                parent_node=node,
                 attribute=attr,
             )
             if inner
@@ -162,4 +160,5 @@ def _(node, objid: PathID, parent_node=None, attribute=None) -> Generator[Tuple[
 
 
 def node2id(module_node: cst.Module):
+
     yield from __node2id(module_node, PathID())

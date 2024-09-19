@@ -24,3 +24,16 @@ from a.b.c import z
 """
     )
     assert q.find_import_from(module="a.b.c".split("."), name="z").code_for_node() == "from a.b.c import z"
+
+
+def test_find_all_import_from():
+    q = Query(
+        "\n".join(
+            code := [
+                "from a.b.c import x",
+                "from a.b.c import y",
+                "from a.b.c import z",
+            ]
+        )
+    )
+    assert q.find_import_from().code_for_nodes() == code

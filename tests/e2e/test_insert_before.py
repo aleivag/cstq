@@ -7,14 +7,14 @@ from cstq import Query
 def test_insert_before_last_import_node():
     # This test inserts a "import os" at the top of the file
     q = Query("import re\nimport sys")
-    import_os = Query("import os").body[0].node()
+    import_os = cst.parse_statement("import os")
     q.body[1].insert_before(import_os)
     assert q.code().strip() == "import re\nimport os\nimport sys".strip()
 
 
 def test_insert_before_first_import_node():
     q = Query("import re\nimport sys")
-    import_os = Query("import os").body[0].node()
+    import_os = cst.parse_statement("import os")
     q.body[0].insert_before(import_os)
     assert q.code().strip() == "import os\nimport re\nimport sys".strip()
 
@@ -46,3 +46,11 @@ def bar(z, a, b, c):...
 def baz(z, a, b, c):...
 """.strip()
     )
+
+
+def test_insert_before_last_import_extended_node():
+    # This test inserts a "import os" at the top of the file
+    q = Query("import re\nimport sys")
+    import_os = cst.parse_statement("import os")
+    q.body[1].extended_node().insert_before(import_os)
+    assert q.code().strip() == "import re\nimport os\nimport sys".strip()

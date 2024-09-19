@@ -11,7 +11,7 @@ import libcst.matchers as m
 from cstq.csttraformers import InserterNodeTransformer, InsertMode, ReplaceNodeTransformer
 from cstq.cstvisitors import Extractor
 from cstq.matchers import MATCH_INPUT, match, matcher
-from cstq.matchers_helpers import build_attribute_matcher
+from cstq.matchers_helpers import build_attribute_matcher, str2mattr
 from cstq.node2id import node2id
 from cstq.nodes.extended import CSTQExtendedNode
 from cstq.nodes.range import CSTQRange
@@ -24,6 +24,56 @@ class CollectionOfNodes:
         self.__node_ids = sorted(set(node_ids))
         self.root = root
 
+    def __bool__(self):
+        return bool(self.__len__())
+
+    def __or__(self, other):
+        assert self.root == other.root, "Both collections must have the same root"
+        return CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)
+
+    def __getitem__(self, item) -> CollectionOfNodes:
+        if isinstance(item, int):
+            return CollectionOfNodes(
+                [self.root.get_node_id(node[item]) for node in self.nodes() if isinstance(node, CSTQRange)],
+                root=self.root,
+            )
+        if isinstance(item, slice):
+            # maybe treat slice a bit different
+            return CollectionOfNodes(
+                [
+                    self.root.get_node_id(elem)
+                    for node in self.nodes()
+                    if isinstance(node, CSTQRange)
+                    for elem in cast(CSTQRange, node[item])
+                ],
+                root=self.root,
+            )
+
+        return self.filter(item)
+
+    def __getattr__(self, item) -> CollectionOfNodes:
+        results: list[str] = []
+        for _node_id, node in self.__nodes.items():
+            if not hasattr(node, item):
+                continue
+
+            attr = getattr(node, item)
+            if isinstance(attr, cst.CSTNode):
+                results.append(self.root.get_node_id(attr))
+            elif isinstance(attr, (list, tuple)):
+                results.append(_node_id.attribute(item))
+
+        return CollectionOfNodes(
+            results,
+            self.root,
+        )
+
+    def __repr__(self) -> str:
+        return f"<CollectionOfNodes nodes={self.__node_ids}>"
+
+    def __len__(self) -> int:
+        return len(self.__node_ids)
+
     @property
     def __nodes(self) -> dict[str, cst.CSTNode]:
         return {
@@ -34,7 +84,7 @@ class CollectionOfNodes:
     def _nodes_id(self) -> list[str]:
         return self.__node_ids
 
-    def slice(self, start=None, end=None, step=None):  # noqa: A003
+    def slice(self, start=None, end=None, step=None):
         return CollectionOfNodes(self.__node_ids[slice(start, end, step)], root=self.root)
 
     def map(self, fnc: Callable[[cst.CSTNode | CSTQExtendedNode], T_]) -> list[T_]:
@@ -51,7 +101,7 @@ class CollectionOfNodes:
         self.map(fnc)
         return self
 
-    def filter(  # noqa: A003
+    def filter(
         self,
         *test: m.BaseMatcherNode | Callable[[cst.CSTNode | CSTQExtendedNode], bool] | cst.CSTNode,
     ) -> CollectionOfNodes:
@@ -162,13 +212,11 @@ class CollectionOfNodes:
 
         return nodes
 
-    def find_import_from(self, module: list[str] | str, name: None | str = None):
-        if isinstance(module, str):
-            module = module.split(".")
+    def find_import_from(self, module: list[str] | str | None = None, name: None | str = None):
+        if isinstance(module, list):
+            module = ".".join(module)
 
-        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = (
-            build_attribute_matcher(module) if module else m.DoNotCare()
-        )
+        module_match: m.BaseMatcherNode | m.DoNotCareSentinel = str2mattr(module) if module else m.DoNotCare()
         names = [m.ImportAlias(name=m.Name(name))] if name else m.DoNotCare()
         matcher = m.ImportFrom(module=module_match, names=names)
 
@@ -182,55 +230,8 @@ class CollectionOfNodes:
         )
         return self.search(m.ImportAlias(name=module_match))
 
-    def __bool__(self):
-        return bool(self.__len__())
-
-    def __or__(self, other):
-        assert self.root == other.root, "Both collections must have the same root"
-        return CollectionOfNodes([*self.__node_ids, *other._nodes_id], root=self.root)
-
-    def __getitem__(self, item) -> CollectionOfNodes:
-        if isinstance(item, int):
-            return CollectionOfNodes(
-                [self.root.get_node_id(node[item]) for node in self.nodes() if isinstance(node, CSTQRange)],
-                root=self.root,
-            )
-        if isinstance(item, slice):
-            # maybe treat slice a bit different
-            return CollectionOfNodes(
-                [
-                    self.root.get_node_id(elem)
-                    for node in self.nodes()
-                    if isinstance(node, CSTQRange)
-                    for elem in cast(CSTQRange, node[item])
-                ],
-                root=self.root,
-            )
-
-        return self.filter(item)
-
-    def __getattr__(self, item) -> CollectionOfNodes:
-        results: list[str] = []
-        for _node_id, node in self.__nodes.items():
-            if not hasattr(node, item):
-                continue
-
-            attr = getattr(node, item)
-            if isinstance(attr, cst.CSTNode):
-                results.append(self.root.get_node_id(attr))
-            elif isinstance(attr, (list, tuple)):
-                results.append(_node_id.attribute(item))
-
-        return CollectionOfNodes(
-            results,
-            self.root,
-        )
-
-    def __repr__(self) -> str:
-        return f"<CollectionOfNodes nodes={self.__node_ids}>"
-
-    def __len__(self) -> int:
-        return len(self.__node_ids)
+    def find_import(self, module: list[str] | str):
+        return self.search(m.Import()).find_import_alias(module).parent()
 
     def change(self, *arg, **kwargs) -> CollectionOfNodes:
         assert len(arg) < 2, "should provide only one callable"
@@ -420,8 +421,9 @@ class Query(CollectionOfNodes):
         parsed_mod: cst.Module = parse_module(mod)
         self.wrapper: cst.metadata.MetadataWrapper = cst.metadata.MetadataWrapper(parsed_mod)
         self.module: cst.Module = self.wrapper.module
+        # self.module: cst.Module = parsed_mod
 
-        self.__node_to_id: Mapping[cst.CSTNode, str] =  {node: id_ for node, id_ in node2id(self.module)}
+        self.__node_to_id: Mapping[cst.CSTNode, str] = {node: id_ for node, id_ in node2id(self.module)}
         self.__id_to_node: dict[str, cst.CSTNode] = {v: k for k, v in self.__node_to_id.items()}
         self.__extended_nodes: dict[cst.CSTNode, CSTQExtendedNode] = {}
 

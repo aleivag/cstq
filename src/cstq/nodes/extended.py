@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import libcst as cst
 
+from cstq.node2id import PathID
 from cstq.nodes.call import CSTQCall
 from cstq.nodes.class_def import CSTQClassDef
 from cstq.nodes.range import CSTQRange
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class CSTQExtendedNode:
     root: cstq.query.Query
-    node_id: str
+    node_id: PathID
 
     __registered_class = {cst.Call: CSTQCall, cst.ClassDef: CSTQClassDef, cst.List: CSTQList, cst.Tuple: CSTQTuple}
 
@@ -89,6 +90,12 @@ class CSTQExtendedNode:
 
     def collection(self):
         return self.root.collection([self.node_id])
+
+    def insert_before(self, object: cst.CSTNode | CSTQExtendedNode) -> None:
+        self.collection().insert_before(object)
+
+    def insert_after(self, object: cst.CSTNode | CSTQExtendedNode) -> None:
+        self.collection().insert_after(object)
 
     def replace(self, new_node) -> None:
         self.collection().replace(new_node)

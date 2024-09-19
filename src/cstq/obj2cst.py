@@ -10,6 +10,25 @@ str2attr = partial(str2xattr, x=libcst)
 
 @singledispatch
 def str2node(module: str):
+    """
+    If you give it a string, this funtion will try to produce the cst node thats representative of the string,
+    unlike libcst.parse_statement that will produce the statement (sometimes SimpleStatementLine, and Expr).
+    for instance
+
+        str2node("foo()")
+
+    will produce something like:
+
+        Call(
+            func=Name(
+                value='foo',
+            ),
+            args=[],
+        )
+
+
+
+    """
     module = libcst.parse_module(module)
     assert len(module.body) == 1, "str must represent a single attribute"
 

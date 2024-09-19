@@ -37,5 +37,4 @@ class CSTQRange(cst.CSTNode):
     def __iter__(self):
         return iter(self.elems)
 
-    def insert(self, index, node):
-        ...
+    def insert(self, index, node): ...

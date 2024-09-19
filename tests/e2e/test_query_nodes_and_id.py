@@ -1,5 +1,6 @@
 from cstq import Query
 from cstq.node2id import PathID
+
 MODULE = """
 # this is a random module
 one = 1
@@ -13,7 +14,7 @@ def test_get_node_by_id():
     and that getting a node by id, and then asking the id of the node are idemponent actions
     """
     q = Query(MODULE)
-    module_id = PathID() # "$(Module)"
+    module_id = PathID()  # "$(Module)"
     module = q.get_node_by_id(module_id)
     assert module == q.module
     assert q.get_node_id(q.get_node_by_id(module_id)) == module_id
@@ -31,8 +32,8 @@ def test_get_nodes_by_id():
 
     simple_statement_line = q.get_nodes_by_id(
         [
-            body.item(0), #"$(Module).body[0](SimpleStatementLine)", 
-            body.item(1), #"$(Module).body[1](SimpleStatementLine)",
+            body.item(0),  # "$(Module).body[0](SimpleStatementLine)",
+            body.item(1),  # "$(Module).body[1](SimpleStatementLine)",
         ]
     )
 

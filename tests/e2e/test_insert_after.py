@@ -1,20 +1,20 @@
 import libcst as cst
 import libcst.matchers as m
 
-from cstq import Query
+from cstq import Query, str2node
 
 
 def test_insert_after_last_import_node():
     # This test inserts a "import os" at the top of the file
     q = Query("import re\nimport sys")
-    import_os = Query("import os").body[0].node()
+    import_os = cst.parse_statement("import os")
     q.body[1].insert_after(import_os)
     assert q.code().strip() == "import re\nimport sys\nimport os".strip()
 
 
 def test_insert_after_first_import_node():
     q = Query("import re\nimport sys")
-    import_os = Query("import os").body[0].node()
+    import_os = cst.parse_statement("import os")
     q.body[0].insert_after(import_os)
     assert q.code().strip() == "import re\nimport os\nimport sys".strip()
 
@@ -47,3 +47,10 @@ def bar(a, b, z, c):...
 def baz(a, b, z, c):...
 """.strip()
     )
+
+
+def test_insert_after_last_import_extended_node():
+    # This test inserts a "import os" at the top of the file
+    q = Query("import re\nimport sys")
+    q.body[1].extended_node().insert_after(cst.parse_statement("import os"))
+    assert q.code().strip() == "import re\nimport sys\nimport os".strip()
