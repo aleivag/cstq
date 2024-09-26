@@ -6,4 +6,4 @@ from cstq.matchers_helpers import obj2m
 from cstq.obj2cst import obj2cst, str2attr, str2node
 from cstq.query import CollectionOfNodes, Query
 
-__all__ = ["Query", "obj2cst", "obj2m", "str2attr", "str2node", "CollectionOfNodes"]
+__all__: list[str] = ["Query", "obj2cst", "obj2m", "str2attr", "str2node", "CollectionOfNodes"]
