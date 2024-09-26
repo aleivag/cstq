@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # Warning:
-#   modifying this file will trigger to publish anew version
+#   modifying this file will trigger to publish a new version
+#   to modify this file use hatch version and then increment the version
 
 __version__ = "0.0.19"
