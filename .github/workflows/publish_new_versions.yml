@@ -1,0 +1,43 @@
+name: Publish to PyPI
+
+on:
+    push:
+        paths:
+            - 'src/cstq/__version__.py'
+        branches:
+            - main
+
+permissions:
+  contents: read
+
+jobs:
+  main:
+    name: Publish artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+        -   uses: actions/checkout@v3
+        -   name: Set up latest Python
+            uses: actions/setup-python@v4
+            with:
+                python-version: '3.10'
+
+        -   name: Install latest pip, build, twine
+            run: |
+                python -m pip install --upgrade --disable-pip-version-check pip
+                python -m pip install --upgrade hatch
+    
+        -   name: build
+            run: hatch build
+                
+     
+    #   - name: Install dependencies
+    #     run: sudo apt-get install -y libsystemd-dev
+
+    #   - name: Build wheel and source distributions
+    #     run: python setup.py sdist
+
+    #   - name: Upload to PyPI via Twine
+    #     env:
+    #       TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+    #     run: twine upload --verbose -u '__token__' dist/*
