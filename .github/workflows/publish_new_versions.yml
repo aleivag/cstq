@@ -8,7 +8,8 @@ on:
             - main
 
 permissions:
-  contents: read
+  contents: write
+  deployments: write
 
 jobs:
   main:
@@ -30,20 +31,18 @@ jobs:
         -   name: build package
             run: hatch build
         
+        -   name: Create github tag
+            env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            run: |
+                VERSION=$(hatch run python -c 'from cstq.__version__ import __version__;print(__version__)')
+                git tag -a "v$VERSION" -m "release new v$VERSION version"
+                git push origin --tags
+        
         -   name: Upload to PyPI via hatch
             env:
                 HATCH_INDEX_USER: __token__
                 HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
             run: hatch publish
-                    
-     
-    #   - name: Install dependencies
-    #     run: sudo apt-get install -y libsystemd-dev
-
-    #   - name: Build wheel and source distributions
-    #     run: python setup.py sdist
-
-    #   - name: Upload to PyPI via Twine
-    #     env:
-    #       TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-    #     run: twine upload --verbose -u '__token__' dist/*
+        
+        
