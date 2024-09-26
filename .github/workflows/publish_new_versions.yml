@@ -18,6 +18,7 @@ jobs:
 
     steps:
         -   uses: actions/checkout@v3
+
         -   name: Set up latest Python
             uses: actions/setup-python@v4
             with:
@@ -36,6 +37,8 @@ jobs:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             run: |
                 VERSION=$(hatch run python -c 'from cstq.__version__ import __version__;print(__version__)')
+                git config user.name github-actions
+                git config user.email github-actions@github.com
                 git tag -a "v$VERSION" -m "release new v$VERSION version"
                 git push origin --tags
         
