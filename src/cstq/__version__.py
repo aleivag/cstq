@@ -7,4 +7,4 @@
 #   to modify this file use hatch version and then increment the version
 #      hatch version <new-ver>
 
-__version__ = "0.0.19"
+__version__ = "0.0.20"
